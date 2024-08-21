@@ -1,0 +1,1086 @@
+---
+title: "R_Notes_StudAss24"
+author: "Sharon"
+date: '`r Sys.Date()`'
+output: html_document
+---
+
+```{r}
+use_git()
+```
+
+
+# Basics
+
+```{r working-directory, echo=F, eval=FALSE, results='hide', warning=F}
+# what is the working directory?
+getwd()
+
+# if you need to adjust it:
+setwd("/Users/sharonvandenburg/Documents/Werk & Loopbaan/Projecten/Stoepplantjes 2024/Data_R")
+
+# set working dir as a variable
+my.dir <- getwd()
+
+# what files are in that working directory?
+list.files(my.dir, recursive= TRUE)
+
+# remove my.dir variable from environment
+rm(my.dir)
+```
+
+```{r Packages, warning=F, results='hide', message=FALSE}
+#layout file/export
+library(knitr)
+library(rmarkdown)
+library(officer)
+library(rvg)
+library(xlsx)
+
+# data
+library(readxl)
+library(dplyr)
+library(plyr)
+library(tidyverse)
+library(vegan)
+```
+
+# Floron Data
+
+## km-Grid cell 
+
+```{r Import}
+ km_Observation_data <- readRDS("~/Documents/Werk & Loopbaan/Projecten/Stoepplantjes 2024/Data_R/Laurens/Observation_data.rds")
+ 
+ km_Visit_data <- readRDS("~/Documents/Werk & Loopbaan/Projecten/Stoepplantjes 2024/Data_R/Laurens/Visit_data.rds")
+ 
+#also read "~/Documents/Werk & Loopbaan/Projecten/Stoepplantjes 2024/Data_R/Laurens/README_file.rds", zie wat hieronder staat
+```
+
+km_Observation_data:
+- Site: 	site ID of visit, 1 x 1 km grid cells
+- Visit:	visit ID
+- Year:		year of visit, period: 2012 - 2019
+- Date:		date of visit, period: 2012 - 2019
+- **Species:	species ID, as used by FLORON in their database**
+
+km_Visit_data:
+- Site: 	site ID of visit, 1 x 1 km grid cells
+- Visit:	visit ID
+- Year:		year of visit, period: 2012 - 2019
+- Date:		date of visit, period: 2012 - 2019
+- Observer:	observer ID, the observer that uploaded observations to the database
+- N_observers:	number of observers for a single list of observations
+- Duration:	number of hours spent observing
+- **N_species:	raw number of unique species recorded during the visit**
+
+De data van een grid cell (bv. 49) staat dus per voorkomende plantsoort (bv nr 200) in de Obs file. Dit is samengevoegd tot species richness per visit (bv. 1920) in de Visit file. 
+
+Alle losse observaties staan dus in de Obs file & alle samenvattingen per visit is de Visit file.
+
+> Er wordt dus enkel naar Y/N voorkomen gekeken per soort + species richness
+
+```{r delete-files-for-time-being}
+rm(km_Observation_data, 
+   km_Visit_data)
+```
+
+
+# Stoep Data
+
+## Cleaning, editing
+
+https://www.geeksforgeeks.org/data-cleaning-in-r/
+
+Laadt data in hoe je normaal doet --> hernoem --> combine location data with occurrence data --> edit
+
+```{r Import-and-merge}
+#IMPORT DATA STOEP + BWNR
+Import_dataStoep <- read_excel("~/Documents/Werk & Loopbaan/Projecten/Stoepplantjes 2024/Data_R/Export_stoep_R.xlsx", 
+    sheet = "originele data") 
+
+Import_dataStoep_loc <- read_excel("~/Documents/Werk & Loopbaan/Projecten/Stoepplantjes 2024/Data_R/adres_stoep20240704-203311.xlsx", 
+    sheet = "adres_stoep20240704-203311") #1st version, 07/2024
+
+#COMBINE DATASETS
+library(dplyr)
+
+# Select specific columns from Import_dataStoep_loc.test
+edit.selected_columns <- select(Import_dataStoep_loc, Afstand, Lat, Lon, Straat, Huisnummer, Toevoeging, Postcode, Plaats)
+
+# Combine with Import_dataStoep to create a new data set
+edit.datastoep.combine <- cbind(edit.selected_columns, Import_dataStoep)
+
+column_names <- names(edit.datastoep.combine)
+print(column_names)
+```
+
+```{r Edit-1-Columns}
+#rename columns
+edit.datastoep.renamed <- edit.datastoep.combine %>%
+  dplyr::rename(
+    BAG_dist = Afstand,
+    lat = Lat,
+    lon = Lon,
+    street = Straat,
+    house_nr = Huisnummer,
+    addition = Toevoeging,
+    zip = Postcode,
+    city = Plaats,
+    session = sessie,
+    sp_nr = soortnummer,
+    date = datum,
+    original_address = plaatsnaam,
+    remark = opmerking,
+    certainty_imagerec = zeker,
+    original_kmcell = kmhok,
+    submission_method = invoermethode,
+    country = land,
+    imagerec = image_recognition,
+    original_x = x,
+    original_y = y,
+    province = provincie,
+    dutch_name = nednaam,
+    sci_name = wetnaam,
+    family = familie,
+    red_list = rl,
+    rarity = zzz 
+  )
+
+# order columns
+edit.datastoep.reordered <- edit.datastoep.renamed %>%
+  select(id, session, date, created, # session 
+         sp_nr, dutch_name,sci_name, family, red_list, rarity, # species 
+         validated, imagerec, certainty_imagerec, # validation
+         street, house_nr, addition, zip, city, province, country, lat, lon, # relevant location  
+         original_x, original_y, original_address, BAG_dist, original_kmcell, # old location
+         submission_method, email, naam, remark) #other
+```
+
+```{r Edit-2-Resolution}
+# take out an error: Zoeterwoude is not copied into the new location data (city column)
+edit.datastoep.reordered$city[edit.datastoep.reordered$original_address == "Zoeterwoude"] <- "Zoeterwoude"
+
+# add column for highest resolution available (= most specific scale in original address)
+# Create the new column based on the conditions
+edit.datastoep.av_res <- edit.datastoep.reordered %>%
+  mutate(
+    available_resolution = case_when(
+      # Condition for exactly 4 digits
+      str_detect(original_address, "\\b\\d{4}\\b") ~ "zipcode",
+      
+      # Condition for a comma followed by a space and exactly two capital letters
+      str_detect(original_address, ", [A-Z]{2}") ~ "city",
+      
+      # Condition for no comma and not exactly 4 digits
+      !str_detect(original_address, ",") & !str_detect(original_address, "\\b\\d{4}\\b") ~ "city",
+      
+      # Default case
+      TRUE ~ "street"
+    )
+  )
+
+# add column for 4 letters of zip only
+edit.datastoep.av_res$zip_stripped <- substr(edit.datastoep.av_res$zip, 1, 4)
+```
+
+```{r Take-out-weird-streetnames}
+# Create the new column based on the conditions
+edit.datastoep.av_res <- edit.datastoep.av_res %>%
+  mutate(
+    streetname_validation = case_when(
+      # Condition for no comma and not exactly 4 digits
+      str_detect(available_resolution, "street") & 
+        str_detect(original_address, "^\\d+,") ~ "CHECK",
+      
+      # Default case
+      TRUE ~ "OK"
+    )
+  )
+
+check_data <- edit.datastoep.av_res %>%
+  filter(streetname_validation == "CHECK")
+print(check_data) # only one data point: 125993 (in city: Elburg)
+```
+
+> take out id 125993? --> heeft als adres '16'
+
+```{r Check-BAG-distance}
+# Create the new column based on the conditions
+edit.datastoep.av_res <- edit.datastoep.av_res %>%
+  mutate(
+    BAG_dist_check = case_when(
+      # Condition for more than 2 digits before the decimal point
+      str_detect(BAG_dist, "^\\d{3,}\\.\\d*") ~ "CHECK",
+      
+      # Default case
+      TRUE ~ "OK"
+    )
+  )
+
+check_BAG_dist <- edit.datastoep.av_res %>%
+  filter(BAG_dist_check == "CHECK") %>%
+  select(id, street, zip, city, BAG_dist, original_address)
+print(check_BAG_dist)
+
+library(xlsx)
+write.xlsx(check_BAG_dist, file="check_BAG_dist.xlsx", sheetName="high_BAG_dist")
+```
+
+> discuss with Maarten, BWNR
+
+```{r Edit-3-Relevant-columns}
+# only keep relevant colums
+edit.datastoep.relevant <- edit.datastoep.av_res %>%
+  select(id, session, date, # session 
+         sp_nr, dutch_name,sci_name, family, red_list, rarity, # species 
+         validated, imagerec, certainty_imagerec, # validation
+         street, house_nr, addition, zip, zip_stripped, city, province, country, available_resolution, lat, lon # relevant location
+  )
+```
+
+```{r Cleaning}
+library(dplyr)
+# clean data
+clean.datastoep.validated <- edit.datastoep.relevant %>%
+  filter(validated != 0) # exclude non-validated data (0=non validated)
+
+clean.datastoep.NL <- clean.datastoep.validated %>%
+  filter(country != 'BE') # exclude data BE
+
+# rename clean data to simpler name
+datastoep_complete <- clean.datastoep.NL #includes data of at least city resolution
+
+# data set with only data with resolution of at least zip
+datastoep_highresolution <- datastoep_complete %>%
+  filter(available_resolution %in% c("zipcode", "street"))
+```
+
+```{r Clean-environment}
+# Delete multiple datasets
+rm(edit.selected_columns, 
+   edit.datastoep.combine, 
+   column_names,
+   edit.datastoep.renamed,
+   edit.datastoep.reordered,
+   edit.datastoep.av_res,
+   edit.datastoep.relevant,
+   clean.datastoep.validated,
+   clean.datastoep.NL,
+   check_data,
+   Import_dataStoep_loc, 
+   Import_dataStoep
+   )
+
+# Check the remaining datasets
+ls()
+```
+
+## Adding diveristy variables 
+
+```{r Dataframes-&-Species-richness}
+# ZIP 
+library(tidyverse)
+  # retrieve sci_name & location from main data set + make table with freq of indiv per sp per location
+occurrence <- datastoep_highresolution[,c(6,16)] 
+occurrence.table <- data.frame(table(occurrence)) 
+
+library(dplyr)
+  # make table with column per sp and occurrence data
+sprich_zip <- occurrence.table  %>% 
+  pivot_wider(
+    names_from = sci_name,
+    values_from = Freq
+  )
+
+library(plyr)
+  # calculate sprich and put in a new dataset called diveristy
+diversity_zip <- ddply(sprich_zip,~zip,function(x) {
+   data.frame(sprich=sum(x[-1]>0))
+ })
+
+# ZIP STRIPPED 
+library(tidyverse)
+  # retrieve sci_name & location from main data set + make table with freq of indiv per sp per location
+occurrence <- datastoep_highresolution[,c(6,17)] 
+occurrence.table <- data.frame(table(occurrence)) 
+
+library(dplyr)
+  # make table with column per sp and occurrence data
+sprich_zipstr <- occurrence.table  %>% 
+  pivot_wider(
+    names_from = sci_name,
+    values_from = Freq
+  )
+
+library(plyr)
+  # calculate sprich and put in a new dataset called diveristy
+diversity_zipstripped <- ddply(sprich_zipstr,~zip_stripped,function(x) {
+   data.frame(sprich=sum(x[-1]>0))
+ })
+
+# CITY 
+library(tidyverse)
+  # retrieve sci_name & location from main data set + make table with freq of indiv per sp per location
+occurrence <- datastoep_complete[,c(6,18)] 
+occurrence.table <- data.frame(table(occurrence)) 
+
+library(dplyr)
+  # make table with column per sp and occurrence data
+sprich_city <- occurrence.table  %>% 
+  pivot_wider(
+    names_from = sci_name,
+    values_from = Freq
+  )
+
+library(plyr)
+  # calculate sprich and put in a new dataset called diveristy
+diversity_city <- ddply(sprich_city,~city,function(x) {
+   data.frame(sprich=sum(x[-1]>0))
+ })
+```
+
+```{r Abundance}
+# Zip 
+ps <- table(datastoep_highresolution$sci_name, datastoep_highresolution$zip)
+abundance <- colSums(ps)
+
+    # Convert 'abundance' to a named vector with city names as names
+abundance_named <- setNames(abundance, colnames(ps))
+    # Merge 'diversity_city' with 'abundance_named'
+diversity_zip <- diversity_zip %>%
+  mutate(abundance = abundance_named[zip])
+
+# Zip stripped
+ps <- table(datastoep_highresolution$sci_name, datastoep_highresolution$zip_stripped)
+abundance <- colSums(ps)
+
+abundance_named <- setNames(abundance, colnames(ps))
+diversity_zipstripped <- diversity_zipstripped %>%
+  mutate(abundance = abundance_named[zip_stripped])
+
+# City 
+ps <- table(datastoep_complete$sci_name, datastoep_complete$city)
+abundance <- colSums(ps)
+
+abundance_named <- setNames(abundance, colnames(ps))
+diversity_city <- diversity_city %>%
+  mutate(abundance = abundance_named[city])
+```
+
+> voor volgende diveristy measures, zie Abundance voor code 
+
+```{r Clean-environment-2}
+# Delete multiple data sets
+rm(
+   ps,
+   sprich_zip,
+   sprich_zipstr,
+   sprich_city,
+   abundance,
+   abundance_named,
+   occurrence,
+   occurrence.table,
+   check_BAG_dist
+   )
+
+# Check the remaining data sets
+ls()
+```
+
+## Location selection 
+
+```{r #-locations-sufficient-data}
+# zip
+zip_30 <- sum(diversity_zip$abundance > 30) #21
+zip_50 <- sum(diversity_zip$abundance > 50) #10
+zip_100 <- sum(diversity_zip$abundance > 100) #3
+
+# zip stripped
+zipstr_30 <- sum(diversity_zipstripped$abundance > 30) #45
+zipstr_50 <- sum(diversity_zipstripped$abundance > 50) #18
+zipstr_100 <- sum(diversity_zipstripped$abundance > 100) #7
+
+# city
+city_30 <- sum(diversity_city$abundance > 30) #51
+city_50 <- sum(diversity_city$abundance > 50) #27
+city_100 <- sum(diversity_city$abundance > 100) #12
+```
+
+```{r table-locations-sufficient-data}
+values <- c("zip_30", "zip_50", "zip_100", "zipstr_30", "zipstr_50", "zipstr_100", "city_30", "city_50", "city_100") 
+sums <- c(zip_30, zip_50, zip_100, zipstr_30, zipstr_50, zipstr_100, city_30, city_50, city_100) 
+
+# Extract thresholds and categories
+thresholds <- sapply(strsplit(values, "_"), `[`, 2)
+categories <- sapply(strsplit(values, "_"), `[`, 1)
+
+# Map categories to their descriptions
+category_descriptions <- ifelse(categories == "zip", "Zip",
+                          ifelse(categories == "zipstr", "Zip stripped",
+                                 ifelse(categories == "city", "City", NA)))
+
+# Create a data frame
+result_table <- data.frame(
+   Scale = category_descriptions,
+  "Min obs" = thresholds,
+  "Num of loc" = sums
+)
+
+result_table$LessThan26 <- ifelse(result_table$Num.of.loc < 26, "Yes", "No")
+result_table$LessThan21 <- ifelse(result_table$Num.of.loc < 21, "Yes", "No")
+result_table$LessThan16 <- ifelse(result_table$Num.of.loc < 16, "Yes", "No")
+result_table$LessThan11 <- ifelse(result_table$Num.of.loc < 11, "Yes", "No")
+
+# Print the result table
+print(result_table)
+```
+
+```{r export-locations-sufficient-data}
+# >30
+Locations_zip <- diversity_zip %>%
+  filter(abundance > 30)
+Locations_zipstr <- diversity_zipstripped %>%
+  filter(abundance > 30)
+Locations_city <- diversity_city %>%
+  filter(abundance > 30)
+
+# Export
+library(xlsx)
+write.xlsx(result_table, file="Location_selection_Resolution.xlsx", sheetName="#_per_resolution")
+write.xlsx(Locations_zip,
+           file="Location_selection_Resolution.xlsx",
+           sheetName="zip_30", append=TRUE)
+write.xlsx(Locations_zipstr,
+           file="Location_selection_Resolution.xlsx",
+           sheetName="zipstr_30", append=TRUE)
+write.xlsx(Locations_city,
+           file="Location_selection_Resolution.xlsx",
+           sheetName="city_30", append=TRUE)
+
+# >50
+Locations_zip <- diversity_zip %>%
+  filter(abundance > 50)
+Locations_zipstr <- diversity_zipstripped %>%
+  filter(abundance > 50)
+Locations_city <- diversity_city %>%
+  filter(abundance > 50)
+
+# Add to export file
+write.xlsx(Locations_zip,
+           file="Location_selection_Resolution.xlsx",
+           sheetName="zip_50", append=TRUE)
+write.xlsx(Locations_zipstr,
+           file="Location_selection_Resolution.xlsx",
+           sheetName="zipstr_50", append=TRUE)
+write.xlsx(Locations_city,
+           file="Location_selection_Resolution.xlsx",
+           sheetName="city_50", append=TRUE)
+
+# >100
+Locations_zip <- diversity_zip %>%
+  filter(abundance > 100)
+Locations_zipstr <- diversity_zipstripped %>%
+  filter(abundance > 100)
+Locations_city <- diversity_city %>%
+  filter(abundance > 100)
+
+# Add to export file
+write.xlsx(Locations_zip,
+           file="Location_selection_Resolution.xlsx",
+           sheetName="zip_100", append=TRUE)
+write.xlsx(Locations_zipstr,
+           file="Location_selection_Resolution.xlsx",
+           sheetName="zipstr_100", append=TRUE)
+write.xlsx(Locations_city,
+           file="Location_selection_Resolution.xlsx",
+           sheetName="city_100", append=TRUE)
+```
+
+```{r clean-environment-3}
+rm(
+   values,
+   city_100,
+   city_50,
+   city_30,
+   zip_100,
+   zip_50,
+   zip_30,
+   zipstr_100,
+   zipstr_50,
+   zipstr_30,
+   category_descriptions,
+   categories,
+   sums,
+   thresholds,
+   result_table,
+   Locations_city,
+   Locations_zip,
+   Locations_zipstr
+)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Knit 
+
+```{r Knitting, eval=F}
+library(rmarkdown)
+options(knitr.duplicate.label = "allow")
+render('R_Notes_StudAss24_2.Rmd', 'all')
+```
+
+# Notes
+
+## To add to diversity
+
+A.S.A.P
+
+* shannon? Niet logisch want abundance
+* simpson? Niet logisch want abundance
+* evenness? Niet logisch want abundance
+* beta diversity! Hoe?
+
+Later
+
+* Functional div? Hoe? -> Hill numbers (hill_func_parti)
+
+## Meeting LM 
+
+```{r MEETING_LM, echo=F, eval=FALSE, results='hide', warning=F}
+#Meeting LM
+library(tidyverse)
+
+datastoep.simple <- datastoep[,c(9,20)] # take sci_name & location from data set
+
+data.stoep.table <- data.frame(table(datastoep.simple)) # make table with freq of indiv per sp per location
+
+library(dplyr)
+
+# make table with column per sp and occurrence data (zoals bij TUFF data)
+data.stoep.table2 <- data.stoep.table  %>% 
+  pivot_wider(
+    names_from = wetnaam,
+    values_from = Freq
+  )
+```
+
+## To do
+
+```{r Selection-locations}
+# top ... locations --> under '#### Subsets top locations' in stage docx
+```
+
+```{r Graphs}
+# Data per location within a (top 20) selection --> under '###### Graph type testing' in stage docx
+```
+
+## Other 
+
+```{r Diveristy-datasets-19-8,echo=F, eval=FALSE, results='hide', warning=F }
+# Zip:  d4, n2      - adding sp rich on zip level (thus high resolution needed)
+unique_values <- unique(datastoep_highresolution$zip)
+diversity_zip <- data.frame(zip = unique_values)
+
+# Zip stripped:  d4 - adding sp rich on zip level (thus high resolution needed)
+unique_values <- unique(datastoep_highresolution$zip_stripped)
+diversity_zipstripped <- data.frame(zip_stripped = unique_values)
+
+# City              - all data usable (thus datastoep_complete)
+unique_values <- unique(datastoep_complete$city)
+diversity_city <- data.frame(city = unique_values)
+
+
+#{r Species-richness-OLD}
+
+# see: https://rdrr.io/cran/vegan/man/diversity.html for explanation
+library(vegan)
+
+# Zip
+sprich_select_zip <- table(datastoep_highresolution$sci_name,datastoep_highresolution$zip)
+sprich_zip <- specnumber(sprich_select_zip,MARGIN=2)
+sprich_zip <- as.data.frame(sprich_zip)
+
+diversity_zip$sprich <- sprich_zip$sprich_zip # add to diveristy dataset
+
+range(sprich_zip) # min, max value
+
+# Zip stripped
+sprich_select_zipstripped <- table(datastoep_highresolution$sci_name,datastoep_highresolution$zip_stripped)
+sprich_zipstripped <- specnumber(sprich_select_zipstripped,MARGIN=2)
+sprich_zipstripped <- as.data.frame(sprich_zipstripped)
+
+diversity_zipstripped$sprich <- sprich_zipstripped$sprich_zipstripped # add to diveristy dataset
+
+range(sprich_zipstripped) # min, max value
+
+# See which would better to use > select on sp rich 
+filtered_data_zip <- sprich_zip[sprich_zip$sprich_zip > 20, ]
+filtered_data_zip_str <- sprich_zipstripped[sprich_zipstripped$sprich_zipstripped > 20, ] # meer data
+
+    # > Waarom heeft Stripped meer data in de filter data dan niet stripped?! > logisch want door het samenvoegen van zips die dezelfde zip_stripped hebben zijn de getallen hoger ;)
+
+# City 
+sprich_select_city <- table(datastoep_complete$sci_name,datastoep_complete$city)
+sprich_city <- specnumber(sprich_select_city,MARGIN=2)
+sprich_city <- as.data.frame(sprich_city)
+
+diversity_city$sprich <- sprich_city$sprich_city # add to diveristy dataset
+
+#> de manier waarop ik de sprich variabel toevoeg aan de dataset klopt niet, dus ik heb het opniew geprobeerd (19/8)
+```
+
+```{r NOTES-add-to-dataset, echo=F, eval=FALSE, results='hide', warning=F}
+print(ps)
+print(abundance) # klopt gwn nog
+
+
+
+
+# Convert 'abundance' to a named vector with city names as names
+abundance_named <- setNames(abundance, colnames(ps))
+
+# Merge 'diversity_city' with 'abundance_named'
+diversity_city <- diversity_city %>%
+  mutate(abundance = abundance_named[city])
+
+# View the updated 'diversity_city' data frame
+print(diversity_city)
+
+
+
+abundance_named <- setNames(abundance, colnames(ps))
+diversity_city <- diversity_city %>%
+  mutate(abundance = abundance_named[city])
+```
+
+```{r Export-to-multiple-excel-sheets,echo=F, eval=FALSE, results='hide', warning=F}
+library(openxlsx)
+write.xlsx(check_BAG_dist, file="check_BAG_dist.xlsx", sheetName="high_BAG_dist", rowNames=TRUE)
+write.xlsx(dataframe2, file="check_BAG_dist.xlsx", sheetName="sheet2", append=TRUE, rowNames=TRUE)
+```
+
+```{r table-location-selection,echo=F, eval=FALSE, results='hide', warning=F}
+# Overview table 1
+values <- c("zip_30", "zip_50", "zip_100", "zipstr_30", "zipstr_50", "zipstr_100", "city_30", "city_50", "city_100") 
+sums <- c(zip_30, zip_50, zip_100, zipstr_30, zipstr_50, zipstr_100, city_30, city_50, city_100) 
+  # Extract thresholds and categories
+thresholds <- sapply(strsplit(values, "_"), `[`, 2)
+categories <- sapply(strsplit(values, "_"), `[`, 1)
+  # Map categories to their descriptions
+category_descriptions <- ifelse(categories == "zip", "Zip",
+                          ifelse(categories == "zipstr", "Zip stripped",
+                                 ifelse(categories == "city", "City", NA)))
+  # Create a data frame
+result_table <- data.frame(
+   Scale = category_descriptions,
+  "Minimum observation" = thresholds,
+  "Number of locations" = sums
+)
+
+print(result_table)
+
+
+#Overview table 2
+dataset_conditions <- c("> 30 observations", "> 50 observations", "> 100 observations")
+resolution <- c("distance", "reaction", "distance")
+
+# Calculate counts
+counts <- c(sum(df$distance > 30), sum(df$reaction > 3), sum(df$distance > 40))
+
+# Combine into a table
+result_table <- data.frame(
+  Condition = dataset_conditions,
+  Count = counts,
+  Column = columns
+)
+
+# Print the result table
+print(result_table)
+```
+
+```{r sufficient-data, echo=F, eval=FALSE, results='hide', warning=F}
+X <- 50
+count <- sum(diversity_zip$abundance > X)
+print(paste("Number of rows with values greater than", X, ":", count))
+```
+
+```{r Zoeterwoude-in-city-column-14/8, echo=F, eval=FALSE, results='hide', warning=F}
+# Sample data frame
+df <- data.frame(
+  city = c("Amsterdam", "Rotterdam", "Zoetermeer"),
+  original_address = c("Zoeterwoude", "Amsterdam", "Zoeterwoude")
+)
+
+print(df)
+
+# Update the 'city' column where 'original_address' equals 'Zoeterwoude'
+df$city[df$original_address == "Zoeterwoude"] <- "New City Name"
+
+# Print updated data frame
+print("Updated Data Frame:")
+print(df)
+```
+
+```{r Meeting-LM, echo=F, eval=FALSE, results='hide', warning=F}
+#Meeting LM
+datastoep.simple <- datastoep[,c(9,20)] # haal wetnaam & locatie uit dataset
+
+data.stoep.table <- data.frame(table(datastoep.simple)) # make table with freq of indiv per sp per location
+
+library(dplyr)
+
+# Combine Import data with location data 
+datastoep.poging1 <- data.frame(
+  Import_dataStoep[, c(1, 2, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23)],  # Select columns from dataset1
+  Import_dataStoep_loc.test[, c(4, 5, 6, 7, 8, 9, 10, 11)]   # Select columns from dataset2
+)
+
+# Select specific columns from dataset1
+selected_columns <- select(Import_dataStoep_loc.test, Afstand, Lat, Lon, Straat, Huisnummer, Toevoeging, Postcode, Plaats)
+
+# Combine with dataset2 to create a new dataset
+datastoep.poging2 <- cbind(selected_columns, Import_dataStoep)
+
+# make table with colum per sp and occurence data (zoals bij TUFF data)
+data.stoep.table2 <- data.stoep.table  %>% 
+  pivot_wider(
+    names_from = wetnaam,
+    values_from = Freq
+  )
+```
+
+```{r old-code, echo=F, eval=FALSE, results='hide', warning=F}
+# rename all colums
+column_names <- names(edit.datastoep.combine)
+print(column_names)
+
+datastoep <- datastoep.combine %>%
+  rename(
+    new_name1 = Afstand,
+    new_name2 = Lat,
+    new_name3 = Lon,
+    new_name1 = Straat,
+    new_name2 = Huisnummer,
+    new_name3 = Toevoeging,
+    new_name1 = Postcode,
+    new_name2 = Plaats,
+    new_name3 = id,
+    new_name1 = sessie,
+    new_name2 = email,
+    new_name3 = naam,
+    new_name1 = soortnummer,
+    date = datum,
+    x = x,
+    y = y,
+    new_name2 = plaatsnaam,
+    new_name3 = opmerking,
+    new_name1 = created,
+    new_name2 = validated,
+    new_name3 = zeker,
+    new_name1 = image_recognition,
+    new_name2 = kmhok,
+    new_name3 = invoermethode,
+     new_name1 = land,
+    new_name2 = provincie,
+    new_name3 = nednaam,
+    new_name1 = wetnaam,
+    new_name2 = familie,
+    new_name3 = rl,
+    new_name1 = zzz 
+  )
+
+# Load dplyr package
+library(dplyr)
+
+# Example dataset
+dataset.test <- data.frame(
+  B = 1:3,
+  A = 4:6,
+  C = 7:9
+)
+
+# Reorder columns using dplyr
+ordered_dataset.test <- dataset.test %>%
+  select(A, B, C)
+
+# View the reordered dataset
+print(ordered_dataset.test)
+
+
+# SPLIT COLUM
+# Load tidyr package
+library(tidyr)
+
+# Example dataset
+df <- data.frame(
+  id = 1:3,
+  text_column = c("A,1", "B,2", "C,3")
+)
+
+# Split the text_column into multiple columns
+edit.datastoep.reordered2.seperate <- edit.datastoep.reordered2 %>%
+  separate(original_address.dub, into = c("original_address.dub", "city?"), sep = ",")
+
+# View the result
+print(edit.datastoep.reordered2.seperate)
+```
+
+```{r available-resolution, echo=F, eval=FALSE, results='hide', warning=F}
+# available resolution variable add
+
+ - (1) add kolom with 'most specific scale available'
+     - hiervoor heb ik het orginele adress nodig --> zit niet in datastoep_complete
+     - hiervoor moet city uit het orginele adress gefilterd zijn --> doen in excel?
+    
+# trying to fix (1) --> zie hierboven 
+
+# add colum that shows highest resolution scale available
+```
+
+```{r available-resolution-2, echo=F, eval=FALSE, results='hide', warning=F}
+# Duplicate dataset (for now)
+#edit.datastoep.reordered2 <- edit.datastoep.reordered 
+
+# Duplicate Original location colum as column C
+#edit.datastoep.reordered2$original_address <- edit.datastoep.reordered2$original_address.dub
+
+# text to colum --> in hope to isolate city 
+
+
+    # # Load tidyr package
+    # library(tidyr)
+
+    # Example dataset
+    # df <- data.frame(
+     id = 1:3,
+     text_column = c("A,1", "B,2", "C,3")
+    )
+
+    # Split the text_column into multiple columns
+    # edit.datastoep.reordered2.seperate <- edit.datastoep.reordered2 %>%
+      separate(original_address.dub, into = c("original_address.dub", "city?"), sep = ",")
+
+    # View the result
+    # print(edit.datastoep.reordered2.seperate)
+
+#USEFUL
+  library(stringr)
+ # Use stringr to split by the last comma
+edit.datastoep.reordered.seperate <- edit.datastoep.reordered %>%
+  mutate(
+    # Create a new column with the part before the last comma
+    before_last_comma = str_extract(original_address, "^[^,]+(,[^,]+)*"),
+    # Create a new column with the part after the last comma
+    after_last_comma = str_remove(original_address, "^[^,]+(,[^,]+)*,")
+  ) 
+
+! # Take out non cities
+- filter 4 cijfers
+- filter 2 Hoofdletters
+- filter alle provincies
+
+    edit.datastoep.reordered.seperate2 <- edit.datastoep.reordered.seperate %>%
+      mutate(after_last_comma = str_c(" ", after_last_comma))
+
+    # Modify the code to split by the last space (to take out spaces)
+    edit.datastoep.reordered.separate3 <- edit.datastoep.reordered.seperate2 %>%
+      mutate(
+        # Create a new column with the part before the last space
+       before_last_space = str_extract(original_address, "^[^ ]+( [^ ]+)*"),
+        # Create a new column with the part after the last space
+       after_last_space = str_remove(original_address, "^[^ ]+( [^ ]+)* ")
+     )
+
+# SEMI USEFUL DEZE # Create a new column excluding values that start with 4 digits or have exactly 2 capital letters
+edit.datastoep.reordered.seperate.filter1 <- edit.datastoep.reordered.seperate %>%
+  mutate(
+    scale_filter1 = ifelse(
+      !str_detect(after_last_comma, "^\\d{4}") & !str_detect(after_last_comma, "^[A-Z]{2}$"),
+      after_last_comma,
+      NA
+    )
+  )
+
+#to do
+- delete space at start
+```
+
+```{r available-resolution-3, echo=F, eval=FALSE, results='hide', warning=F}
+edit.datastoep.reordered.separate.test <- edit.datastoep.reordered %>%
+  mutate(
+    # Create a new column with the part before the last comma
+    before_last_comma = str_extract(original_address, "^(.*)(, [^,]*)?$"),
+    
+    # Create a new column with the part after the last comma, if present
+    after_last_comma = str_remove(original_address, "^(.*)(, [^,]*)?$"),
+    
+    # If there is no comma, separate based on 4 digits, a space, and two capital letters
+    before_last_comma = if_else(
+      str_detect(original_address, ","),
+      before_last_comma,
+      str_extract(original_address, "^(\\d{4} [A-Z]{2})"),
+    ),
+    
+    after_last_comma = if_else(
+      str_detect(original_address, ","),
+      after_last_comma,
+      str_remove(original_address, "^(\\d{4} [A-Z]{2})")
+    )
+  )
+
+# - ook nog DE eruithalen dan
+
+# Updated code to handle both cases
+edit.datastoep.reordered.separate.test <- edit.datastoep.reordered %>%
+  mutate(
+    # Split at the last comma
+    before_last_comma = str_extract(original_address, "^(.*)(, [^,]*)?$"),
+    after_last_comma = str_remove(original_address, "^(.*)(, [^,]*)?$"),
+    
+    # If there is no comma, split after 4 digits and a space
+    before_digits_space = if_else(
+      str_detect(original_address, ","),
+      NA_character_, # NA if a comma is present
+      str_extract(original_address, "^\\d{4} ")
+    ),
+    after_digits_space = if_else(
+      str_detect(original_address, ","),
+      NA_character_, # NA if a comma is present
+      str_remove(original_address, "^\\d{4} ")
+    )
+  )
+
+# Updated code to handle both cases
+edit.datastoep.reordered.separate.test <- edit.datastoep.reordered %>%
+  mutate(
+    # Split at the last comma
+    before_last_comma = str_extract(original_address, "^(.*)(, [^,]*)?$"),
+    after_last_comma = str_remove(original_address, "^(.*)(, [^,]*)?$"),
+    
+    # If there is no comma, split after 4 digits and a space
+    before_digits_space = if_else(
+      str_detect(original_address, ","),
+      NA_character_, # NA if a comma is present
+      str_extract(original_address, "^\\d{4} ")
+    ),
+    after_digits_space = if_else(
+      str_detect(original_address, ","),
+      NA_character_, # NA if a comma is present
+      str_remove(original_address, "^\\d{4} ")
+    )
+  )
+
+```
+
+```{r available-resolution-4, echo=F, eval=FALSE, results='hide', warning=F}
+library(stringr)
+ # Use stringr to split by the last comma
+edit.datastoep.reordered.seperate <- edit.datastoep.reordered %>%
+  mutate(
+    # Create a new column with the part before the last comma
+    before_last_comma = str_extract(original_address, "^[^,]+(,[^,]+)*"),
+    # Create a new column with the part after the last comma
+    after_last_comma = str_remove(original_address, "^[^,]+(,[^,]+)*,"),
+    # Remove leading space from after_last_comma
+    after_last_comma = str_trim(after_last_comma, side = "left"),
+  ) 
+
+# delete first 4 digits space 
+# print into new column, except when 4 digits and space, or 4 digits space 2. capitals, or 2 capitals
+
+```
+
+```{r available-resolution-5, echo=F, eval=FALSE, results='hide', warning=F}
+# create column that only contains a value when there is no zipcode or streetname 
+# Create a new column based on the conditions
+edit.datastoep.reordered.separate.poging2 <- edit.datastoep.reordered %>%
+  mutate(
+    # Copy values to the new column if there is no comma and not exactly 4 digits
+    OnlyCityOrLower = if_else(
+      str_detect(original_address, ",") | str_detect(original_address, "\\b\\d{4}\\b"),
+      NA_character_, # NA if a comma is present or exactly 4 digits are found
+      original_address
+    )
+  )
+```
+
+```{r available-resolution-6, echo=F, eval=FALSE, results='hide', warning=F}
+# Create the new column based on the conditions
+edit.datastoep.reordered.separate3 <- edit.datastoep.reordered %>%
+  mutate(
+    available_resolution = if_else(
+      !str_detect(original_address, ",") & !str_detect(original_address, "\\b\\d{4}\\b"),
+      "CityProvince",
+      NA_character_ # Set to NA if the conditions are not met
+    )
+  )
+
+# Create the new column based on the conditions
+edit.datastoep.reordered.separate4 <- edit.datastoep.reordered %>%
+  mutate(
+    available_resolution = case_when(
+      str_detect(original_address, "\\b\\d{4}\\b") ~ "zipcode",
+      !str_detect(original_address, ",") & !str_detect(original_address, "\\b\\d{4}\\b") ~ "CityProvince",
+      TRUE ~ "street" # Set to "street" for all other cases
+    )
+  )
+```
+
+```{r available-resolution-GOT-IT, echo=F, eval=FALSE, results='hide', warning=F}
+# Create the new column based on the conditions
+edit.datastoep.reordered.separate5 <- edit.datastoep.reordered %>%
+  mutate(
+    available_resolution = case_when(
+      # Condition for exactly 4 digits
+      str_detect(original_address, "\\b\\d{4}\\b") ~ "zipcode",
+      
+      # Condition for a comma followed by a space and exactly two capital letters
+      str_detect(original_address, ", [A-Z]{2}") ~ "CityProvince",
+      
+      # Condition for no comma and not exactly 4 digits
+      !str_detect(original_address, ",") & !str_detect(original_address, "\\b\\d{4}\\b") ~ "CityProvince",
+      
+      # Default case
+      TRUE ~ "street"
+    )
+  )
+```
+
+
+
+
+
+
+
+
+# ...
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

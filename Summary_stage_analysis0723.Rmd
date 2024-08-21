@@ -1,0 +1,3918 @@
+---
+title: "Stage Analysis Stoepplantjes"
+author: "Sharon"
+date: 'July 2023'
+output: 
+  html_document:
+    toc: true
+    number_sections: true
+classoption: 
+- bookmarksnumbered
+---
+# General Analysis 
+
+## Start
+_____________________
+
+Plots that will be used are marked with "> use"
+
+### Packages
+_____________________
+
+Load at the beginning of every session.
+
+```{r packages}
+library(readxl)
+library(ggplot2)
+library(carData)
+library(car)
+library(RColorBrewer)
+library(htmltools)
+library(ggpubr)
+library(gridExtra) #for combining plots
+library(cowplot) #for combining plots
+```
+
+### Data
+_____________________
+
+Downloaded Stoepplantjes data from the Floron platform on March 9 2023 - edited the location incorrectly, so this will be addressed and the data will be replaced later. Deleted e-mailadresses and names --> see Data management in Analysis documents.
+
+**Latest edit:**
+
+- 3/13/23 fixed location separation
+- 3/14/23 added variable year
+- 3/17/23 took out all unvalidated variables
+- 4/4/23 incl editedR_3, all location data
+
+```{r data}
+# Latest data
+Data0411 <- read_excel("~/Documents/Universiteit/4. Internships/Hortus 2023/Data/Data versioning/04_11_Location selection.xlsx", 
+    sheet = "Complete_val_data")
+```
+
+_____________________
+
+**Older versions** 
+
+In the plots below, older versions may be used. Therefore, these data need to be loaded as well.
+
+```{r old data}
+#version 3/13
+Data0313 <- read_excel("~/Documents/Universiteit/4. Internships/Hortus 2023/Data/Data versioning/03_13_General analysis.xlsx", 
+    sheet = "Complete_data")
+
+#version 3/14
+Data0314 <- read_excel("~/Documents/Universiteit/4. Internships/Hortus 2023/Data/Data versioning/03_13_General analysis.xlsx", 
+    sheet = "Complete_data")
+
+#version 3/20
+Data0320 <- read_excel("~/Documents/Universiteit/4. Internships/Hortus 2023/Data/Data versioning/03_20_General analysis.xlsx", 
+    sheet = "Complete_val_data")
+
+#version 3/21
+Data0321 <- read_excel("~/Documents/Universiteit/4. Internships/Hortus 2023/Data/Data versioning/03_21_General analysis.xlsx", 
+    sheet = "Complete_val_data")
+
+#version 4/4
+Data0404 <- read_excel("~/Documents/Universiteit/4. Internships/Hortus 2023/Data/Data versioning/04_04_General analysis.xlsx", 
+    sheet = "Complete_val_data")
+```
+
+_____________________
+
+**EditedR**
+
+An additional dataset 'EditedR' (in the excelsheet 'date_General analysis.xlsx') was derived from the original validated dataset (Complete_val_data). This set contains information on different location scales (e.g. observations per province, per location or zip codes). During the process of graph design, more data might be added to these tabs. 
+
+```{r edited data}
+# City level with province information
+DataEditedR <- read_excel("~/Documents/Universiteit/4. Internships/Hortus 2023/Data/Data versioning/03_24_General analysis.xlsx", 
+    sheet = "EditedR")
+
+# Zip code level with province and city information
+DataEditedR_2 <- read_excel("~/Documents/Universiteit/4. Internships/Hortus 2023/Data/Data versioning/03_28_General analysis.xlsx", 
+    sheet = "EditedR_2")
+
+# Street level with province and city information
+DataEditedR_3 <- read_excel("~/Documents/Universiteit/4. Internships/Hortus 2023/Data/Data versioning/04_04_General analysis.xlsx", 
+    sheet = "EditedR_3")
+```
+
+**ProvinceInfo**
+
+Added to or 4/11, but created in one of the earliest versions of the data editing. 
+
+```{r province data}
+ProvinceInfo <- read_excel("~/Documents/Universiteit/4. Internships/Hortus 2023/Data/Data versioning/04_11_General analysis.xlsx", 
+    sheet = "Province info")
+```
+
+_______________________
+
+## Data Stucture
+_____________________
+
+### First graphs 
+_____________________
+
+The graphs below are used as inspiration for further analysis. These graphs will not be used in the results.
+
+**Data collection through time in a simple plot**
+
+```{r, eval=T, echo=T}
+plot(Data0313$date, Data0313$Obs)
+```
+
+> Do not use. Better visualisation possible
+
+Interesting, but a ggplot might give additional value
+
+**GGplot data collection through time**
+
+```{r, eval=F, echo=T}
+gg_date_Obs <- ggplot(Data0313, aes(date, Obs, label=land))
+
+gg_date_Obs + geom_point(aes(colour=land))+
+  labs(x="Dates", y="Number of observation", title = "Data collection through time") +
+  geom_text(data=subset(Data0313, land = "BE"))          
+```
+
+> Do not use. Points are the form of letters
+
+**Collection through time - cumulative**
+
+```{r , eval=F, echo=T}
+gg_date_Obs <- ggplot(Data0313, aes(date, Obs, label=land))
+
+gg_date_Obs + geom_point(aes(colour=land))+
+  labs(x="Dates", y="Number of observation", title = "Data collection through time") 
+```
+
+> Do not use
+
+**Percent stack - total 100%**
+ 
+```{r, eval=T, echo=T}
+# Percent
+ggplot(Data0320, aes(fill=year, y=count, x=provincename)) +             #a
+    geom_bar(position="fill", stat="identity") +                        #b 
+  labs(x="Province", y="% of collected data",                        #c
+       title = "Data collection per province distributed over time") +  #d
+  scale_fill_manual(values=c('darkgreen', 'gold1', 'green4')) +         #e
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))   #g
+
+```
+
+> Do not use - might be useful, but lined graph might be more valuable
+
+**Line stack - lm per province**
+
+```{r, eval=FALSE, echo=T}
+ggplot(Data0314,aes(x=date,y=cumsum(count)))+
+         geom_point()+
+         theme_classic()+geom_smooth(method=lm,se=FALSE,
+                  aes(color=province))
+```
+
+> Do not use 
+
+**Pie chart: Obs vs province**
+
+```{r, eval=FALSE, echo=T}
+PieObsProvince <- read_excel("~/Documents/Universiteit/4. Internships/Hortus 2023/Data/Data versioning/03_14_General analysis.xlsx", 
+    sheet = "Obs verdeling")
+pie(PieObsProvince$ObsProvince,PieObsProvince$Province)
+```
+
+> Do not use. Pie charts are easier with Excel.
+
+### Useful graphs
+_____________________
+
+**Stacked bar chart - collection through time per province**
+
+*Figure_A*
+
+```{r}
+######### XXXXX
+library(forcats)
+
+# Figure_A_new - Stacked - collection through time NEW
+Figure_A_new <-ggplot(Data0320, aes(x = reorder(provincename,~count), y=count, fill=year)) #a
+
+Figure_A_new + geom_bar( position="stack", stat="identity") +                       #b 
+  labs(x="Province", y="Number of observations",                        #c
+       title = "Data collection per province over time") +              #d
+  scale_fill_manual(values=c('darkgreen', 'gold1', 'green4')) +         #e
+  scale_y_continuous(breaks = c(0,500, 1000,1500,2000,2500, 3000))+     #f
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))   #g
+
+
+
+ggsave("R_figures/Figure_A_new.pdf", width= 9, height=7)            #h
+```
+
+> Use
+
+a. data
+b. bar type
+c. lab names
+d. title
+e. Manual fill color
+f. Manual breaks on scale
+g. Rotation and spacing of x-asis
+h. Save the graph to R_Figures in working directory 
+
+    + scale_color_brewer(palette = "RdYlGn") #To add palette - did not work
+
+```{r}
+ggbarplot(Data0320, x = "provincename", y = "count",
+          fill = "year",               # change fill color by cyl
+          color = "white",            # Set bar border colors to white
+          sort.val = "desc",          # Sort the value in dscending order
+          sort.by.groups = FALSE,     # Don't sort inside each group
+          x.text.angle = 90) +  
+         labs(x="Province", y="Number of observations", title = "Data per city", subtitle = "Cities with >55 observations - top 21 ")
+```
+    
+_______________
+
+**Province and observations - Point - Obs per province + #cities per province**  
+
+*Figure_B* 
+
+```{r}
+# Figure_B - Dot
+ggplot(DataEditedR, aes(y=obsprovince, x=provincename)) +                   #a
+    geom_point(aes(size = Cities_per_province), color = "green4")+      #b
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+  #c
+  labs(x="Province", y="Number of observations",                        #d
+       title = "Data collection and cities per province")+              #e
+    scale_y_continuous(breaks = c(0,500, 1000,1500,2000,2500, 3000))+   #f
+  labs(color="green4", size="Cities per \nprovince")
+
+ggsave("R_figures/Figure_B.pdf", width= 9, height=7)
+```
+
+> Use 
+
+a. data
+b. type
+c. Rotation and spacing of x-axis
+d. lab names
+e. title
+f. Manual breaks on scale
+
+```{r}
+Model_0620 <- lm(obsprovince~Cities_per_province, data=DataEditedR)
+```
+```{r}
+#Homogeneity variance check 1/2 
+residualPlots(Model_0620, layout = c(2,1), id = TRUE)
+```
+Warning, which is logical because Location is a factor with a lot of levels
+```{r}
+#Homogeneity variance check 2/2 
+ncvTest(Model_0620) # p < 0.05 means heteroscedacity (not desired)
+```
+```{r}
+#Transformation
+boxCox(Model_0620)
+```
+* Response^{-1} seems the best option
+
+```{r}
+#1st transformation model
+Model_0620_2 <- lm((obsprovince^{1/3}) ~ Cities_per_province, data=DataEditedR) #City, all
+```
+
+```{r}
+#Homogeneity variance check 1/2 
+residualPlots(Model_0620_2, layout = c(2,1), id = TRUE)
+
+#Homogeneity variance check 2/2 
+ncvTest(Model_0620_2) # p < 0.05 means heteroscedacity (not desired)
+
+#Normal distribution residuals 1/2
+shapiro.test(Model_0620_2$resid) # H0: residuals are normally distributed
+
+#Normal distribution residuals 2/2
+library(car)
+qqPlot(Model_0620_2$residuals, id = TRUE) #see if residuals are within confindence region (id=TRUE -> name point)
+```
+```{r}
+#Extreme values 1/2
+influenceIndexPlot(Model_0620_2) #Motivation for taking out extreme value as outlier: Labjournal error, Cook's distance > 0.5, hatvalues > 2.5 times hatvalue mean
+```
+
+> Model not usable
+ 
+_________________________
+
+## Location Scales
+_____________________
+
+In this section, multiple location scales are investigated. Different graphs show the data distribution within these location scales from different aspects and with different degrees of depth.
+
+### City Scale 
+_____________________
+
+###### Subset creation
+_____________________
+
+Different subsets were created with different criteria. The stats below are used as inspiration for the created subsets.
+
+**Stats Excel** See 04_04_General analysis.xlsx, Factsheet
+
+**Stat** | **Value**
+----- | -----
+Gemiddelde	| 88,15
+Mediaan 	| 16,5
+Q0 (minimumwaarde)	| 1
+Q1 (25%)	| 6
+Q2 (50%)	| 16,5
+Q3 (75%)	| 85
+Q4 (Maximumwaarde)	| 1015
+
+____________________
+
+**Data Subset** | **Criteria**
+--------------- | ------------------
+DataSubset1 | includes all cities with at least 3 observations. This number of observations is a minimum, according to statistic rule of thumb.
+DataSubset2 | includes all cities with at least 8 observations. This number excludes a chuck of data, but is not motivated otherwise.
+DataSubset3 | includes all cities with at least 10 observations. This number of observations is the median of all validated data BE only contains Antwerpen now
+DataSubset4 | includes all cities with at least 10 observations in NL. AKA - took out Antwerpen.
+DataSubset5 | includes all cities with at least 10 and at most 300 observations in NL. AKA - took out Amsterdam, to focus on the distribution of the other cities.
+DataSubset6 | includes all cities with at least 22 observations in NL. This number of observations is the average of all validated data. 
+DataSubset7 | includes all cities with at least 22 and at most 300 observations in NL. AKA - took out Amsterdam, to focus on the distribution of the other cities.
+
+- Use DataSubset4 to show the distribution of all cities above median and use DataSubset5 to show a close up of this distribution (by excluding Adam). From hereon further selection is possible. 
+
+*Subset codes*
+
+```{r subsets}
+# Complete set
+DataSubset1 <- DataEditedR[which(DataEditedR$obscity > 2),] # 3 is statically motivated
+DataSubset2 <- DataEditedR[which(DataEditedR$obscity > 8),]
+DataSubset3 <- DataEditedR[which(DataEditedR$obscity > 10),] # median
+
+# Without BE
+DataSubset4 <- DataEditedR[which(DataEditedR$country=='NL' & DataEditedR$obscity > 10),] #zonder BE (alleen antwerpen heeft genoeg data), alleen NL 
+DataSubset5 <- DataEditedR[which(DataEditedR$country=='NL' & DataEditedR$obscity > 10 & DataEditedR$obscity < 300),] #zonder BE (alleen antwerpen heeft genoeg data), alleen NL en zonder Amsterdam (om te zien dat hoe de andere data verdeeld is - gezien de hoge waarde. Niet exclude, maar alleen voor de visualisatie)
+DataSubset6 <- DataEditedR[which(DataEditedR$country=='NL' & DataEditedR$obscity > 22 ),]  #
+DataSubset7 <- DataEditedR[which(DataEditedR$country=='NL' & DataEditedR$obscity > 22 & DataEditedR$obscity < 300),] #Excl BE, excl Amsterdam
+```
+
+_______________________
+
+###### Observations per city 
+_____________________
+
+**Observations per city - visualized per province** - incl & excl Amsterdam
+
+*Figure_C & Figure_D*
+
+```{r}
+#Figure_C - Obs/city/province - incl Adam
+ggplot(DataSubset4, aes(y=obscity, x=cityprovince))+                           # a
+  geom_point(color="green4") +                                                 # b
+  facet_wrap(~province, scales="free_x", nrow=2)+                              # c
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=4))+ # d
+  labs(x="City", y="Number of observations",                                   # e
+       title = "Data collection per city per province",                        #
+       subtitle = "Cities in the Netherlands with at least 10 observations",
+       )+        #
+  geom_hline(yintercept = 100, color="green4", linetype= "dashed")+            # f
+    scale_y_continuous(breaks = c(0,100,250,500,1000))                         # g
+
+ggsave("R_figures/Figure_C.pdf", width= 9, height=7)
+
+#Figure_D Obs/city/province - excl Adam
+ggplot(DataSubset5, aes(y=obscity, x=cityprovince))+                           # a
+  geom_point(color="green4") +                                                 # b
+  facet_wrap(~province, scales="free_x", nrow=2)+                              # c
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=4))+ # d
+  labs(x="City", y="Number of observations",                                   # e
+       title = "Data collection per city per province",                        #
+       subtitle = "Cities in the Netherlands with at least 10 observations",
+       caption = "Amsterdam excluded \nDashed lines at 30 and 90 (top 10)")+         #
+  geom_hline(yintercept = c(30,90), color="green4", linetype="dashed")+             # f
+    scale_y_continuous(breaks = c(0,30,90,100,250,500,1000))                         # g
+
+ggsave("R_figures/Figure_D.pdf", width= 9, height=11)
+```
+
+> Use both
+
+a. data
+b. graph type, colored manually 
+c. multiple graphs in 1 grapgh. nrow=1 all graphs on 1 line, scales="free_x" only shows cities with data 
+d. Rotation and spacing of x-asis
+e. title axis, title, caption
+f. Dashed green line on y=150
+g. Manual breaks on scale
+
+```{r, eval=F, echo=F}
+**Full code, not optimal**
+    #ggplot point - obs per city TEST
+    ggplot(DataSubset1, aes(y=obscity, x=cityprovince))+ 
+      geom_point() + facet_wrap(~province, scales="free_x", strip.position = "bottom")+ #nrow=1 voor alles op 1  rij, scales="free_x" toont alleen de aanwezige steden, strip.position="bottom" voor plek province labels
+      theme(strip.placement="outside", axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=4))+          #strip.placement --> prov namen onder de cities
+      labs(x="City", y="Number of observations",                        
+       title = "Data collection per city")+ 
+      geom_hline(yintercept = 100, color="green4", linetype= "dashed")+    
+        scale_y_continuous(breaks = c(0,250,500,750,1000))  
+#Obs per cities, punten per province zichtbaar, maar namen momenteel allemaal bij elke provincie.... see https://www.youtube.com/watch?v=KoAJZYEOwSE 
+```
+
+_______________________
+
+###### Top 10 
+_____________________
+
+Top 10 cities with most observations - visualized per province
+
+**Data Subset** | **Criteria**
+--------------- | ------------------
+DataSubset8 | includes the top 10 locations with the most observation (no selection in scale). These data are all >90 observations.
+
+**Data collection per city per province** - Top 10
+
+*Figure_E*
+
+```{r}
+#Subset 
+DataSubset8 <- DataEditedR[which(DataEditedR$obscity > 90),] # top 10
+
+#Figure_E - Obs/city/province - Top 10
+ggplot(DataSubset8, aes(y=obscity, x=cityprovince))+                            # a
+  geom_point(color="green4") +                                                  # b
+  facet_wrap(~province, scales="free_x", nrow=1)+                               # c
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=10))+ # d
+  labs(x="City", y="Number of observations",                                    # e
+       title = "Data collection per city per province",                         # 
+       subtitle ="Top 10 (>90 observations)",                                   # 
+       caption = "Line seperates top 3")+                             #  
+  geom_hline(yintercept = 200, color="green4", linetype= "dashed")+             # f
+    scale_y_continuous(breaks = c(0,100,200, 250,500,1000))                     # g
+
+ggsave("R_figures/Figure_E.pdf", width= 9, height=7)
+```
+
+> Use
+
+a. data
+b. graph type, colored manually 
+c. multiple graphs in 1 grapgh. nrow=1 all graphs on 1 line, scales="free_x" only shows cities with data 
+d. Rotation and spacing of x-asis
+e. title axis, title, subtitle, caption
+f. Dashed green line on y=150
+g. Manual breaks on scale
+
+_________________
+
+
+
+
+
+
+
+### Zip code Scale
+_______________________
+
+###### Subset creation
+_____________________
+
+Different subsets were created with different criteria. The stats below are used as inspiration for the created subsets.
+
+**Stats Excel** See 04_04_General analysis.xlsx, Factsheet
+
+**Stat** | **Obs/zip code**	| **Obs/city (zip code incl)**
+--------- | ------------- | -------------
+Gemiddelde	| 7,28	| 20,671
+Mediaan	| 2	| 7
+Q0 (minimumwaarde)	| 1	| 1
+Q1 (25%)	| 1	| 2
+Q2 (50%)	| 2	| 7
+Q3 (75%)	| 7	| 26
+Q4 (Maximumwaarde)	| 87	| 141
+
+____________________
+
+**Data Subset** | **Criteria**
+--------------- | ------------------
+DataSubset9 | includes all zip codes with at least 3 observations. This number of observations is a minimum, according to statistic rule of thumb. The median is 2, which is to low statistically. 
+DataSubset10 | includes all cities with at least 10 observations. This number of observations is the median of all validated data. BE is excluded
+DataSubset11 | includes all cities with at least 7 observations. This number of observations is the average of all validated data.
+DataSubset12 | includes all cities with at least 10 observations. This number excludes a chuck of data, but is not motivated otherwise.
+DataSubset13 | includes the top 10 locations with the most observation (selection in zip code scale). These data are all >30 observations.
+DataSubset14 | includes all provinces with at least 10 observations. This number excludes a chuck of data, but is not motivated otherwise.
+
+- Use DataSubset11, 14 and 15
+
+*Subset codes*
+
+```{r}
+# Complete dataset 
+DataSubset9 <- DataEditedR_2[which(DataEditedR_2$obszip > 2),] # 3 is statically motivated
+
+# Excl BE
+DataSubset10 <- DataEditedR_2[which(DataEditedR_2$country=='NL' & DataEditedR_2$obszip > 2),] # 3 is statically motivated and Belgium excl.
+DataSubset11 <- DataEditedR_2[which(DataEditedR_2$country=='NL' & DataEditedR_2$obszip > 7),] #gemiddelde, nl
+DataSubset12 <- DataEditedR_2[which(DataEditedR_2$country=='NL' & DataEditedR_2$obszip > 10),] #no reasoning
+
+# Top 10
+DataSubset13 <- DataEditedR_2[which(DataEditedR_2$country=='NL' & DataEditedR_2$obszip > 30),] #top 10
+
+# Provinces zip and city(zip)obs min Q3
+DataSubset14 <- DataEditedR_2[DataEditedR_2$province%in%c('Limburg', 'Noord-Holland','Gelderland', 'Noord-Brabant','Overijsel', 'Zuid-Holland', 'Groningen'), ]
+```
+
+_______________________
+
+###### Observations per zip code 
+_____________________
+
+**Observations per zip code** - visualized per province + zip code names
+
+*Figure F* 
+
+```{r}
+#Figure_F - Obs/zip/city/province --> labels obszip > 10
+ggplot(DataSubset9, aes(y=obszip, x=cityprovince, label=zipcode))+             # a
+  geom_point(color="green4") +                                                 # b
+  facet_wrap(~province, scales="free_x", nrow=2)+                              # c
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=4))+ # d
+  labs(x="City", y="Number of observations",                                   # e
+       title = "Data collection per zip code, city, and province",             #
+       subtitle = "Zip codes with at least 3 observations",                    #
+       caption = "Zip codes with > 10 observations are labeled")+              #
+  geom_hline(yintercept = 7, color="green4", linetype= "dashed")+              # f
+    scale_y_continuous(breaks = c(0,10, 20, 40, 60, 80, 100)) +                # g
+  geom_text(data=subset(DataSubset9,                                           # h
+                        obszip > 10),                              
+                        nudge_x = 0.1 , nudge_y = 8, check_overlap = T, angle = 45, size = 3) 
+
+ggsave("R_figures/Figure_F.pdf", width= 9, height=7)
+```
+
+> Use - see where to draw the line 
+
+Dashed line:
+- 7 is Q3 of obs zip data
+
+_______________________
+
+**Observations per zip code** - visualized per zip code and province
+
+```{r}
+#Obs per zip code per city --> province not mentioned
+ggplot(DataSubset9, aes(y=obszip, x=zipcode))+                            # a
+  geom_point(color="green4") +                                                 # b
+  facet_wrap(~cityprovince, scales="free_x", nrow=2)+                              # c
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=4))+ # d
+  labs(x="City", y="Number of observations",                               # e
+       title = "Data collection per zip code, city, and province",              #
+       caption = "All displayed zip codes have at least 3 observations")+      #
+  geom_hline(yintercept = 10, color="green4", linetype= "dashed")+            # f
+    scale_y_continuous(breaks = c(0,10, 25, 50, 75, 100))                         # g
+
+ggsave("R_figures/Data_zip_city.pdf", width= 9, height=7)
+```
+
+> Do not use - not optimal visuals
+
+_______________________
+
+**Observations per zip code** - visualized per city and province - BE excl
+
+*Figure_G*
+
+```{r}
+#Figure_G - Obs per zip code per city per province 
+ggplot(DataSubset10, aes(y=obszip, x=cityprovince, label=zipcode))+            # a
+  geom_point(color="green4") +                                                 # b
+  facet_wrap(~province, scales="free_x", nrow=2)+                              # c
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=8))+ # d
+  labs(x="City", y="Number of observations",                                   # e
+       title = "Data collection per zip code, city, and province in NL",        #
+       subtitle = "Zip codes with at least 3 observations",                    #
+       caption = "Each data point represents a zip codes")+                     #
+  geom_hline(yintercept = 20, color="green4", linetype= "dashed")+             # f
+    scale_y_continuous(breaks = c(0, 20, 40, 60, 80, 100))+                    # g
+  geom_text(data=subset(DataSubset10,                                          # h
+                        obszip > 20),                              
+                        nudge_x = 0.1 , nudge_y = 8, check_overlap = T, angle = 45, size = 3)  
+
+ggsave("R_figures/Figure_G.pdf", width= 9, height=7)
+```
+
+> Use - see if it is possible to add more info 
+
+a. data + mention the label for geom_text 
+b. graph type, colored manually 
+c. multiple graphs in 1 graph. nrow=1 all graphs on 1 line, scales="free_x" only shows cities with data 
+d. Rotation and spacing of x-asis
+e. title axis, title, caption
+f. Dashed green line on y=150
+g. Manual breaks on scale
+h. labeling
+
+h. alternative:  geom_label(data=subset(DataSubset10,                          
+                        obszip > 20),                              
+                        nudge_x = 1.0 , nudge_y = 0.50, label.size = 0.025) 
+                        
+_______________________
+
+**Data collection per zipcode, city, and province in NL** - Zip codes with at least 7 observations
+
+```{r}
+#Obs per zip code per city per province --> gemiddelde als baseline
+ggplot(DataSubset11, aes(y=obszip, x=cityprovince))+                           # a
+  geom_point(color="green4") +                                                 # b
+  facet_wrap(~province, scales="free_x", nrow=2)+                              # c
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=4))+ # d
+  labs(x="City", y="Number of observations",                                   # e
+       title = "Data collection per zip code, city, and province in NL",        #
+       subtitle = "Zip codes with at least 7 observations",                    #
+       caption = "Each zip codes has its own data point")+                     #
+  geom_hline(yintercept = 10, color="green4", linetype= "dashed")+             # f
+    scale_y_continuous(breaks = c(0,10, 25, 50, 75, 100))                          # g
+
+ggsave("R_figures/Data_zip_provinceNLGem.pdf", width= 9, height=7)
+```
+
+> Do not use
+
+**Data collection per zipcode, city, and province in NL** - Zip codes with at least 10 observations
+
+```{r}
+#Obs per zip code per city per province --> boven 10
+ggplot(DataSubset12, aes(y=obszip, x=cityprovince))+                           # a
+  geom_point(color="green4") +                                                 # b
+  facet_wrap(~province, scales="free_x", nrow=2)+                              # c
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=4))+ # d
+  labs(x="City", y="Number of observations",                                   # e
+       title = "Data collection per zipcode, city, and province in NL",        #
+       subtitle = "Zip codes with at least 10 observations",                    #
+       caption = "Each zip codes has its own data point")+                     #
+  geom_hline(yintercept = 30, color="green4", linetype= "dashed")+             # f
+    scale_y_continuous(breaks = c(0,25,30, 50, 75, 100))                          # g
+
+ggsave("R_figures/Data_zip_provinceNL10.pdf", width= 9, height=7)
+```
+
+> Do not use
+
+_______________________
+
+###### Top 10 zip codes 
+_____________________
+
+**Zip code - top 10**
+
+*Figure_H*
+
+```{r}
+#Figure_H Obs per zip code per city per province --> gemiddelde als baseline
+ggplot(DataSubset13, aes(y=obszip, x=cityprovince, label=zipcode))+                           # a
+  geom_point(color="green4") +                                                 # b
+  facet_wrap(~province, scales="free_x", nrow=2)+                              # c
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=8))+ # d
+  labs(x="City", y="Number of observations",                                   # e
+       title = "Data collection per zip code, city, and province in NL",        #
+       subtitle = "Top 10 - zip codes with at least 30 observations",          #
+       caption = "Each zip codes has its own data point")+                     #
+  geom_hline(yintercept = 50, color="green4", linetype= "dashed")+             # f
+    scale_y_continuous(breaks = c(30, 40, 50, 60, 70, 80, 90, 100))+           # g
+  geom_text(data=subset(DataSubset13,                                          # h
+                        obszip > 20),                              
+                        nudge_x = 0.1 , nudge_y = 4, check_overlap = T, angle = 45, size = 3)
+
+ggsave("R_figures/Figure_H.pdf", width= 9, height=7)
+```
+
+> use 
+
+_______________________
+
+
+###### Observations per zip code and city
+_____________________
+
+**Comment**
+
+>"IS DIT DE JUISTE MANIER? OF WIL IK ALLE ZIPCODES COMBINEREN PER STAD?" --> Yes
+
+Alle zip code namen als de city ook hoog is.
+
+**Obs per zip code per city per province, ALL PROVINCES**
+
+*Figure_I*
+
+```{r}
+#Figure_I Obs per zip code per city per province 
+# ALL PROVINCE
+# --> zip code labels if both zip en city(zip)obs > Q3
+ggplot(DataSubset9, aes(y=obszip, x=cityprovince, label=zipcode))+             # a
+  geom_point(color="green4") +                                                 # b
+  facet_wrap(~province, scales="free_x", nrow=2)+                              # c
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=4))+ # d
+  labs(x="City", y="Number of observations",                                   # e
+       title = "Data collection per zipcode, city, and province",              #
+       subtitle = "Zip codes with at least 3 observations",                    #
+       caption = "Highest 25% of obs zip & obs city labeled")+                        #
+  geom_hline(yintercept = 7, color="green4", linetype= "dashed")+              # f
+    scale_y_continuous(breaks = c(0,7, 20, 40, 60, 80, 100)) +                 # g
+  geom_text(data=subset(DataSubset9,                                           # h
+                        obscity_zippresent > 26 & obszip > 7 ),                              
+                        nudge_x = 0.1 , nudge_y = 4, check_overlap = T, angle = 45, size = 3) 
+
+ggsave("R_figures/Figure_I.pdf", width= 9, height=7)
+```
+
+> Might use --> BE incl
+
+_______________________
+
+**Obs per zip code per city per province, EXCL BE**
+
+*Figure_J*
+
+```{r}
+#Figure_J Obs per zip code per city per province
+# EXCL BE
+# --> zip code labels if both zip en city(zip)obs > Q3
+ggplot(DataSubset10, aes(y=obszip, x=cityprovince, label=zipcode))+             # a
+  geom_point(color="green4") +                                                 # b
+  facet_wrap(~province, scales="free_x", nrow=2)+                              # c
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=4))+ # d
+  labs(x="City", y="Number of observations",                                   # e
+       title = "Data collection per zipcode, city, and province in NL",              #
+       subtitle = "Zip codes with at least 3 observations",                    #
+       caption = "Highest 25% of obs zip & obs city labeled")+                     #
+  geom_hline(yintercept = 7, color="green4", linetype= "dashed")+             # f
+    scale_y_continuous(breaks = c(0,7, 20, 40, 60, 80, 100)) +                # g
+  geom_text(data=subset(DataSubset10,                                           # h
+                        obscity_zippresent > 26 & obszip > 7 ),                              
+                        nudge_x = 0.1 , nudge_y = 4, check_overlap = T, angle = 45, size = 3) 
+
+ggsave("R_figures/Figure_J.pdf", width= 9, height=7)
+```
+
+> Might use --> BE excl
+
+_______________________
+
+**Obs per zip code per city per province, INCL PROVINCE WITH LABELS**
+
+*Figure_K*
+
+```{r}
+#Figure_K Obs per zip code per city per province
+# INCL PROVINCE WITH LABELS
+# --> zip code labels if both zip en city(zip)obs > Q3
+ggplot(DataSubset14, aes(y=obszip, x=cityprovince, label=zipcode))+             # a
+  geom_point(color="green4") +                                                 # b
+  facet_wrap(~province, scales="free_x", nrow=2)+                              # c
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=4))+ # d
+  labs(x="City", y="Number of observations",                                   # e
+       title = "Data collection per zipcode, city, and province",              #
+       subtitle = "Only provinces with labeled data included",                    #
+       caption = "Highest 25% of obs zip & obs city labeled")+                     #
+  geom_hline(yintercept = 7, color="green4", linetype= "dashed")+             # f
+    scale_y_continuous(breaks = c(0,7, 20, 40, 60, 80, 100)) +                # g
+  geom_text(data=subset(DataSubset14,                                           # h
+                        obscity_zippresent > 26 & obszip > 7 ),                              
+                        nudge_x = 0.1 , nudge_y = 4, check_overlap = T, angle = 45, size = 3) 
+
+ggsave("R_figures/Figure_K.pdf", width= 9, height=7)
+```
+
+> use 
+
+Dashed line: 
+- zip > 20 is top 15 for zip
+- zip > 7 is Q3
+- 26 is Q3 for city obs
+
+a. data + mention the label for geom_text 
+b. graph type, colored manually 
+c. multiple graphs in 1 graph. nrow=1 all graphs on 1 line, scales="free_x" only shows cities with data 
+d. Rotation and spacing of x-asis
+e. title axis, title, caption
+f. Dashed green line on y=150
+g. Manual breaks on scale
+h. labeling
+_______________________
+
+###### Top 10 zip code and city 
+_____________________
+
+City and zip code data combined 
+
+```{r}
+DataSubset15 <- DataEditedR_2[which(DataEditedR_2$country=='NL' 
+& DataEditedR_2$obszip > 30 & DataEditedR_2$obscity_zippresent > 39),] #top 10 zip en city(SUMzip)
+
+```
+
+_______________________ 
+
+**No dashed line and all labeled**
+
+*Figure_L*
+
+```{r}
+#Figure_L Obs per zip code per city per province --> top 10 baseline not supported
+ggplot(DataSubset15, aes(y=obszip, x=cityprovince, label=zipcode))+                           # a
+  geom_point(color="green4") +                                                 # b
+  facet_wrap(~province, scales="free_x", nrow=1)+                              # c
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=10))+ # d
+  labs(x="City", y="Number of observations",                                   # e
+       title = "Data collection per zip code, city, and province in NL",       #
+       subtitle = "Top 10 - zip codes with at least 30 observations \nand at least 40 observation per city",          #
+       caption = "Each zip codes has its own data point")+                     #
+    scale_y_continuous(breaks = c(30, 40, 50, 60, 70, 80, 90, 100))+           # g
+  geom_text(data=subset(DataSubset15,                                          # h
+                        obszip > 20),                              
+                        nudge_x = 0.1 , nudge_y = 4, check_overlap = T, angle = 45, size = 3)
+
+ggsave("R_figures/Figure_L.pdf", width= 9, height=7)
+```
+
+> Use 
+
+a. data + mention the label for geom_text 
+b. graph type, colored manually 
+c. multiple graphs in 1 graph. nrow=1 all graphs on 1 line, scales="free_x" only shows cities with data 
+d. Rotation and spacing of x-asis
+e. title axis, title, caption
+f. Dashed green line on y=150
+g. Manual breaks on scale
+h. labeling
+
+_______________________
+
+**Labeled**
+
+*Figure_M*
+
+```{r}
+#Figure_M Obs per zip code per city per province
+ggplot(DataSubset15, aes(y=obszip, x=cityprovince, label=zipcode))+                   # a
+  geom_point(aes(size = obscity_zippresent), color="green4") +                        # b
+  facet_wrap(~province, scales="free_x", nrow=1)+                                     # c
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=10))+       # d
+  labs(x="City", y="Number of observations",                                          # e
+       title = "Data collection per zip code, city, and province in NL",              #
+       subtitle = "Top 10 - Zip codes with at least 50 observations \nand at least 90 observation per city", #
+       caption = "Top 3 most zip code observations are labeled")+                     #
+    scale_y_continuous(breaks = c(30, 40, 50, 60, 70, 80, 90, 100))+                  # g
+  geom_text(data=subset(DataSubset15,                                                 # h
+                         obscity_zippresent > 90 & obszip > 50),                              
+                        nudge_x = 0.1 , nudge_y = 4, check_overlap = T, angle = 45, size = 3)+
+  labs(color="green4", size="Observations \nper city")                                # i
+
+ggsave("R_figures/Figure_M.pdf", width= 9, height=7)
+```
+
+> Use
+
+*NOG NA TE LOPEN*
+
+a. data + mention the label for geom_text 
+b. graph type, colored manually 
+c. multiple graphs in 1 graph. nrow=1 all graphs on 1 line, scales="free_x" only shows cities with data 
+d. Rotation and spacing of x-asis
+e. title axis, title, caption
+f. Dashed green line on y=150
+g. Manual breaks on scale
+h. labeling
+
+_______________________
+
+###### Observations per zip code, city, and total obs
+_____________________
+
+A subset is made with all zip codes that have more 3 observations (DataSubset11). The graph below shows, like earlier, the number of observations. Mind that zip codes with less than 3 observations are excluded and do not count in the calculations of the total observations. 
+
+**Data collection per zip code, city, and province in NL** - Top 10 - Zip codes with at least 50 observations \nand at least 90 observation per city
+
+*Figure_N*
+
+```{r}
+#Figure_M Obs per zip code per city per province
+ggplot(DataSubset11, aes(y=obscity_zippresent, x=cityprovince, label=zipcode))+             # a
+  geom_point(aes(size = obszip), color="green4") +                  # b
+  facet_wrap(~province, scales="free_x", nrow=1)+                               # c
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=10))+ # d
+  labs(x="City", y="Number of observations",                                    # e
+       title = "Data collection per zip code, city, and province in NL",        #
+       subtitle = "Top 10 - Zip codes with at least 50 observations \nand at least 90 observation per city", #
+       caption = "Top 3 is labeled")+                     #
+  geom_hline(yintercept = 50, color="green4", linetype= "dashed")+              # f
+    scale_y_continuous(breaks = c(30, 40, 50, 60, 70, 80, 90, 100))+            # g
+  geom_text(data=subset(DataSubset11,                                           # h
+                         obscity_zippresent > 90),                              
+                        nudge_x = 0.1 , nudge_y = 4, check_overlap = T, angle = 45, size = 3)+
+  labs(color="green4", size="Observations \nper city")
+
+ggsave("R_figures/Figure_N.pdf", width= 9, height=7)
+```
+
+> Use? 
+
+*NOG NALOPEN*
+
+a. data + mention the label for geom_text 
+b. graph type, colored manually 
+c. multiple graphs in 1 graph. nrow=1 all graphs on 1 line, scales="free_x" only shows cities with data 
+d. Rotation and spacing of x-asis
+e. title axis, title, caption
+f. Dashed green line on y=150
+g. Manual breaks on scale
+h. labeling
+
+__________________________
+
+
+
+
+### Street scale
+________________________
+
+###### Subset creation
+_____________________
+
+Different subsets were created with different criteria. The stats below are used as inspiration for the created subsets.
+
+**Stats Excel** See 04_04_General analysis.xlsx, Factsheet
+
+**Stat** | **Value**
+----- | -----
+Gemiddelde	| 7,90
+Mediaan	| 8
+Q0 (minimum)	| 1
+Q1 (25%)	| 2
+Q2 (50%)	| 8
+Q3 (75%)	| 11
+Q4 (maximum)	| 64
+
+____________________
+
+**Data Subset** | **Criteria**
+--------------- | ------------------
+DataSubset16 | includes all locations with at least 3 observations. This number of observations is a minimum, according to statistic rule of thumb. The median is 2, which is to low statistically.
+DataSubset17 | includes all locations with at least 8 observations. This number of observations is the median of all validated data.
+DataSubset18 | includes all locations with at least 11 observations. This number of observations is the 3rd Quartile of all validated data.
+DataSubset19 | includes all locations with at least 19 observations. This number is not otherwise motivated (besides including the top 30 locations) but excludes a chuck of data. 
+DataSubset20 | includes all the top 10 locations. Thus locations with > 30 observations
+
+- ...use ...
+
+*Subset codes* 
+
+```{r}
+# subsets 
+DataSubset16 <- DataEditedR_3[which(DataEditedR_3$obslocation > 2),] 
+DataSubset17 <- DataEditedR_3[which(DataEditedR_3$obslocation > 8),]
+DataSubset18 <- DataEditedR_3[which(DataEditedR_3$obslocation > 11),] 
+DataSubset19 <- DataEditedR_3[which(DataEditedR_3$obslocation > 19),] 
+DataSubset20 <- DataEditedR_3[which(DataEditedR_3$obslocation > 30),] 
+```
+
+________________________
+
+###### Observations per location 
+_____________________
+
+The 3 graphs below contain the same data. However the labeling differs per graph. One of the 3 graph will be used. 
+
+**Observations per location** - *province or city* label ,min 3 observations
+
+*Figure O & Figure P*
+
+```{r}
+#Figure_O 
+ggplot(DataSubset16, aes(y=obslocation, x=cityprovince, label=province))+            # a
+  geom_point(color="green4") +                                                 # b
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=4))+ # d
+  labs(x="City", y="Number of observations",                                   # e
+       title = "Data collection per location and city",             #
+       subtitle = "Locations with at least 3 observations",                    #
+       caption = "Each data point respresents a location \nTop 10 observations are labeled with corresponding province \nDashed line indicates the 75% mark of all data")+              #
+  geom_hline(yintercept = 11, color="green4", linetype= "dashed")+              # f
+    scale_y_continuous(breaks = c(5, 10,11, 20, 40, 60, 80, 100)) +                # g
+  geom_text(data=subset(DataSubset16,                                           # h
+                        obslocation > 30),                              
+                        nudge_x = 0.1 , nudge_y = 2, check_overlap = T, size = 3)
+  
+ggsave("R_figures/Figure_O.pdf", width= 9, height=7)
+
+#Figure_P
+ggplot(DataSubset16, aes(y=obslocation, x=cityprovince, label=cityprovince))+            # a
+  geom_point(color="green4") +                                                 # b
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=4))+ # d
+  labs(x="City", y="Number of observations",                                   # e
+       title = "Data collection per location and province",             #
+       subtitle = "Locations with at least 3 observations",                    #
+       caption = "Each data point respresents a location \nTop 10 observations are labeled with corresponding province \nDashed line indicates the 75% mark of all data")+              #
+  geom_hline(yintercept = 11, color="green4", linetype= "dashed")+              # f
+    scale_y_continuous(breaks = c(5, 10,11, 20, 40, 60, 80, 100)) +                # g
+  geom_text(data=subset(DataSubset16,                                           # h
+                        obslocation > 30),                              
+                        nudge_x = 0.1 , nudge_y = 2, check_overlap = T, size = 3)
+  
+ggsave("R_figures/Figure_P.pdf", width= 9, height=7)
+```
+
+> Use one of the 2 - *Only use one of the three (Figure O, P, or Q)*
+If it is decided that is it not valuable to display (almost) all data. Figures R or S (or T or U) might be used instead
+
+_____________________________
+
+**Observations per location** - *location* label ,min 3 observations
+
+*Figure Q*
+
+```{r}
+#Figure_Q
+ggplot(DataSubset16, aes(y=obslocation, x=cityprovince, label=location))+      # a
+  geom_point(color="green4") +                                                 # b
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=4))+ # d
+  labs(x="City", y="Number of observations",                                   # e
+       title = "Data collection per location and city",             #
+       subtitle = "Locations with at least 3 observations",                    #
+       caption = "Each data point respresents a location \nTop 10 observations are labeled with corresponding location \nDashed line indicates the 75% mark of all data")+              #
+  geom_hline(yintercept = 11, color="green4", linetype= "dashed")+              # f
+    scale_y_continuous(breaks = c(5, 10,11, 20, 40, 60, 80, 100)) +                # g
+  geom_text(data=subset(DataSubset16,                                           # h
+                        obslocation > 30),                              
+                        nudge_x = 0.1 , nudge_y = 2, check_overlap = T, size = 3)
+
+ggsave("R_figures/Figure_Q.pdf", width= 9, height=9)
+```
+
+> Do not use - *Only use one of the three (Figure O, P, or Q)*
+
+________________________
+
+**Observations per location**
+
+```{r}
+#Obs per location
+ggplot(DataSubset16, aes(y=obslocation, x=location))+                         # a
+  geom_point(color="green4") +                                                # b
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=4))+# d
+  labs(x="Location", y="Number of observations",                              # e
+       title = "Data collection location",                                    #
+       caption = "All displayed ... have at least 3 observations")+           #
+  geom_hline(yintercept = 11, color="green4", linetype= "dashed")+            # f
+    scale_y_continuous(breaks = c(0,11, 25, 50, 75, 100))                     # g
+```
+
+> Do not use - to much on x asis
+
+________________________
+
+**Observations per location** - *province or city * label, min 8 observations
+
+*Figure_R & Figure_S* 
+
+```{r}
+#Figure_R
+ggplot(DataSubset17, aes(y=obslocation, x=cityprovince, label=province))+            # a
+  geom_point(color="green4") +                                                 # b
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=4))+ # d
+  labs(x="City", y="Number of observations",                                   # e
+       title = "Data collection per location and city",             #
+       subtitle = "Locations with at least 8 observations - top 50%",                    #
+       caption = "Each data point respresents a location \nTop 10 observations are labeled with corresponding province \nDashed line indicates the 75% mark of all data")+              #
+  geom_hline(yintercept = 11, color="green4", linetype= "dashed")+              # f
+    scale_y_continuous(breaks = c(0,10,11, 20, 40, 60, 80, 100)) +                # g
+  geom_text(data=subset(DataSubset17,                                           # h
+                        obslocation > 30),                              
+                        nudge_x = 0.1 , nudge_y = 2, check_overlap = T, size = 3)
+  
+ggsave("R_figures/Figure_R.pdf", width= 9, height=7)
+
+#Figure_S
+ggplot(DataSubset17, aes(y=obslocation, x=cityprovince, label=cityprovince))+  # a
+  geom_point(color="green4") +                                                 # b
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=4))+ # d
+  labs(x="City", y="Number of observations",                                   # e
+       title = "Data collection per location and city",             #
+       subtitle = "Locations with at least 8 observations - top 50%",                    #
+       caption = "Each data point respresents a location \nTop 10 observations are labeled with corresponding city \nDashed line indicates the 75% mark of all data")+              #
+  geom_hline(yintercept = 11, color="green4", linetype= "dashed")+              # f
+    scale_y_continuous(breaks = c(0,10,11, 20, 40, 60, 80, 100)) +                # g
+  geom_text(data=subset(DataSubset17,                                           # h
+                        obslocation > 30),                              
+                        nudge_x = 0.1 , nudge_y = 2, check_overlap = T, size = 3)
+  
+ggsave("R_figures/Figure_S.pdf", width= 9, height=7)
+```
+
+> Use one of the 2 
+
+________________________
+
+**Observations per location** - *province or city * label, min 11 observations
+
+*Figure_T & Figure_U* 
+
+```{r}
+#Figure_T
+ggplot(DataSubset18, aes(y=obslocation, x=cityprovince, label=province))+            # a
+  geom_point(color="green4") +                                                 # b
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=4))+ # d
+  labs(x="City", y="Number of observations",                                   # e
+       title = "Data collection per location and city",             #
+       subtitle = "Locations with at least 11 observations - top 25%",                    #
+       caption = "Each data point respresents a location \nTop 10 observations are labeled with corresponding province")+              #
+  geom_hline(yintercept = 30, color="green4", linetype= "dashed")+              # f
+    scale_y_continuous(breaks = c(0,10, 20,30, 40, 60, 80, 100)) +                # g
+  geom_text(data=subset(DataSubset18,                                           # h
+                        obslocation > 30),                              
+                        nudge_x = 0.1 , nudge_y = 2, check_overlap = T, size = 3)
+  
+ggsave("R_figures/Figure_T.pdf", width= 9, height=7)
+
+#Figure_U
+ggplot(DataSubset18, aes(y=obslocation, x=cityprovince, label=cityprovince))+  # a
+  geom_point(color="green4") +                                                 # b
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=4))+ # d
+  labs(x="City", y="Number of observations",                                   # e
+       title = "Data collection per location and city",             #
+       subtitle = "Locations with at least 11 observations - top 25%",                    #
+       caption = "Each data point respresents a location \nTop 10 observations are labeled with corresponding city")+              #
+  geom_hline(yintercept = 30, color="green4", linetype= "dashed")+              # f
+    scale_y_continuous(breaks = c(0,10, 20,30, 40, 60, 80, 100)) +                # g
+  geom_text(data=subset(DataSubset18,                                           # h
+                        obslocation > 30),                              
+                        nudge_x = 0.1 , nudge_y = 2, check_overlap = T, size = 3)
+  
+ggsave("R_figures/Figure_U.pdf", width= 9, height=7)
+```
+
+> Use one of the 2 
+
+________________________
+
+**Observations per location, city and province**
+
+*Figure_V*
+
+```{r}
+#Figure_V 
+ggplot(DataSubset18, aes(y=obslocation, x=location, label=cityprovince))+       # a
+  geom_point(color="green4") +                                                  # b
+  facet_wrap(~province, scales="free_x", nrow=2)+                               # c
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=4))+  # d
+  labs(x="Location", y="Number of observations",                                # e
+       title = "Data collection per location, city, and province",        #
+       subtitle = "Locations with at least 11 observations - top 25%",          #
+       caption = "The top 10 locations are labels with the corresponding city")+   #
+  geom_hline(yintercept = 30, color="green4", linetype= "dashed")+              # f
+    scale_y_continuous(breaks = c(0, 20, 30, 40, 60, 80, 100))+                 # g
+  geom_text(data=subset(DataSubset18,                                           # h
+                        obslocation > 30),                              
+                        nudge_x = 0.1 , nudge_y = 8, check_overlap = T, angle = 45, size = 2)  
+
+ggsave("R_figures/Figure_V.pdf", width= 9, height=7)
+```
+
+> Do not use. Does not add additional value compared to graphs above.
+
+a. data + mention the label for geom_text 
+b. graph type, colored manually 
+c. multiple graphs in 1 graph. nrow=1 all graphs on 1 line, scales="free_x" only shows cities with data 
+d. Rotation and spacing of x-asis
+e. title axis, title, caption
+f. Dashed green line on y=150
+g. Manual breaks on scale
+h. labeling
+
+h. alternative:  geom_label(data=subset(DataSubset10,                          
+                        obszip > 20),                              
+                        nudge_x = 1.0 , nudge_y = 0.50, label.size = 0.025) 
+
+________________________
+
+**Observations per location and province**
+
+*Figure_W*
+
+```{r}
+#Figure_W 
+ggplot(DataSubset19, aes(y=obslocation, x=location, label=cityprovince))+       # a
+  geom_point(color="green4") +                                                  # b
+  facet_wrap(~province, scales="free_x", nrow=1)+                               # c
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=7))+  # d
+  labs(x="Location", y="Number of observations",                                # e
+       title = "Data collection per location, city, and province",        #
+       subtitle = "Locations with at least 20 observations - top 30 locations",          #
+       caption = "The top 10 locations are labels with the corresponding city")+ #
+  geom_hline(yintercept = 30, color="green4", linetype= "dashed")+              # f
+    scale_y_continuous(breaks = c(0, 20, 30, 40, 60, 80, 100))+                 # g
+  geom_text(data=subset(DataSubset19,                                           # h
+                        obslocation > 30),                              
+                        nudge_x = 0.1 , nudge_y = 3, check_overlap = T, angle = 45, size = 3)  
+
+ggsave("R_figures/Figure_W.pdf", width= 9, height=7)
+```
+
+> Use
+
+________________________
+
+###### Top 10 locations
+_______________________
+
+
+**Observations per location and province**
+
+*Figure_X*
+
+```{r}
+#Figure_X
+ggplot(DataSubset20, aes(y=obslocation, x=location, label=cityprovince))+       # a
+  geom_point(color="green4")+                                                   # b
+  facet_wrap(~province, scales="free_x", nrow=1)+                               # c
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=7))+  # d
+  labs(x="Location", y="Number of observations",                                # e
+       title = "Data collection per location, city, and province",        #
+       subtitle = "Locations with at least 30 observations - top 10 locations",          #
+       caption = "The top 4 locations are labels with the corresponding city \nNote that both locations in Heerlen might indicate the same location")+ #
+  geom_hline(yintercept = 50, color="green4", linetype= "dashed")+              # f
+    scale_y_continuous(breaks = c(0, 20, 30, 40, 50, 60, 80, 100))+                 # g
+  geom_text(data=subset(DataSubset20,                                           # h
+                        obslocation > 40),                              
+                        nudge_x = -0.1 , nudge_y = 1, check_overlap = T, angle = 45, size = 3)  
+
+ggsave("R_figures/Figure_X.pdf", width= 9, height=7)
+```
+
+
+##
+
+### Location selection
+
+This section is meant for the display of the locations (on different scales). First some graph types and layouts will be tested to find the best graph type for this section.
+
+###### Subsets top locations 
+
+For each scale, a subset is made containing the top 20 locations. If the value of data point 20 is equal to data point 21 (and 22), then these locations were included as well. Resulting in a top 21 or top 22. 
+
+Top 10 locations per scale were created earlier in this file. Province data was loaded in the 'data' section.
+
+```{r}
+# city
+DataSubset21 <- DataEditedR[which(DataEditedR$obscity > 55),] # top 20 (/21)
+
+# zip code
+DataSubset22 <- DataEditedR_2[which(DataEditedR_2$obszip > 15),] # top 20 (/21)
+
+# location
+DataSubset23 <- DataEditedR_3[which(DataEditedR_3$obslocation > 21),] # top 20 (/21/22)
+```
+
+
+###### Graph type testing 
+
+**GG density** 
+
+https://rpkgs.datanovia.com/ggpubr/index.html#distribution
+
+```{r}
+ggdensity(Data0404, x = "province", 
+   add = "mean", rug = TRUE,
+   color = "provincename", fill = "provincename",
+   palette = c("#00AFBB", "#E7B800","#00AFBB", "#E7B800","#00AFBB", "#E7B800","#00AFBB", "#E7B800","#00AFBB", "#E7B800","#00AFBB", "#E7B800","#00AFBB"))
+```
+
+> do not use - not what i want
+
+________________________________________________
+
+**Ordered bar plot**
+
+https://rpkgs.datanovia.com/ggpubr/index.html#ordered-bar-plots 
+
+*Figure_Y*
+
+```{r, eval=F}
+#Figure_Y - CITY
+ggbarplot(DataSubset21, x = "cityprovince", y = "obscity",
+          fill = "province",               # change fill color by cyl
+          color = "white",            # Set bar border colors to white
+          sort.val = "desc",          # Sort the value in dscending order
+          sort.by.groups = FALSE,     # Don't sort inside each group
+          x.text.angle = 90) +  
+         labs(x="City", y="Number of observations", title = "Data per city", subtitle = "Cities with >55 observations - top 21 ")
+
+ggsave("R_figures/Figure_Y.pdf", width= 9, height=7)
+```
+
+> Use 
+
+_____________________________
+
+*Figure_Z*
+
+```{r, eval=F}
+#Figure_Z - ZIP
+ggbarplot(DataSubset22, x = "zipcode", y = "obszip",
+          fill = "cityprovince",               # change fill color by cyl
+          color = "white",            # Set bar border colors to white
+          sort.val = "desc",          # Sort the value in dscending order
+          sort.by.groups = FALSE,     # Don't sort inside each group
+          x.text.angle = 90) +  
+         labs(x="Zip code", y="Number of observations", title = "Data per zip code", subtitle = "Zip codes with >15 observations - top 21 ")
+
+ggsave("R_figures/Figure_Z.pdf", width= 9, height=7)
+```
+
+> Use 
+
+____________________________________
+
+*Figure_AA*
+
+```{r, eval=F}
+#Figure_AA - LOCATION
+ggbarplot(DataSubset23, x = "location", y = "obslocation",
+          fill = "cityprovince",               # change fill color by cyl
+          color = "white",            # Set bar border colors to white
+          sort.val = "desc",          # Sort the value in dscending order
+          sort.by.groups = FALSE,     # Don't sort inside each group
+          x.text.angle = 90) +  
+         labs(x="Location", y="Number of observations", title = "Data per location", subtitle = "Locations with >21 observations - top 22 ")
+
+ggsave("R_figures/Figure_AA.pdf", width= 9, height=7)
+```
+
+> Use 
+
+_________________________________________________
+
+**Dot chart**
+
+*Figure_AB* 
+
+```{r}
+#Figure_AB - Province
+ggdotchart(ProvinceInfo, x = "province", y = "obs",
+           color = "green4",                       # Color by groups. For pallete: palette = c("#00AFBB", "#E7B800", "#FC4E07"), # Custom color palette
+           sorting = "descending",                       # Sort value in descending order
+           add = "segments",                             # Add segments from y = 0 to dots
+           rotate = TRUE,                                # Rotate vertically
+           group = "obs",                           # Order by groups
+           dot.size = 12,                                 # Large dot size
+           label = round(ProvinceInfo$obs),                        # Add mpg values as dot labels
+           font.label = list(color = "gold1", size = 11, 
+                             vjust = 0.5),               # Adjust label parameters
+           ggtheme = theme_pubr()                        # ggplot2 theme
+           ) +  
+         labs(x="Province", y="Number of observations", title = "Data per province")
+
+ggsave("R_figures/Figure_AB.pdf", width= 9, height=7)
+
+ggdotchart10PROVINCE <-ggdotchart(ProvinceInfo, x = "province", y = "obs",
+           color = "province",palette = c("hotpink", "palevioletred1", "mediumpurple2","purple2","skyblue2","lightblue1", "mediumturquoise","lightseagreen", "mediumseagreen","darkkhaki", "yellow2", "orange2","orangered2"),# Color by groups. For pallete: palette = c("#00AFBB", "#E7B800", "#FC4E07"), # Custom color palette
+           sorting = "ascending",                       # Sort value in descending order
+           add = "segments",                             # Add segments from y = 0 to dots
+           rotate = TRUE,                                # Rotate vertically
+           group = "obs",                           # Order by groups
+           dot.size = 6,                                 # Large dot size
+           label = round(ProvinceInfo$obs),                        # Add mpg values as dot labels
+           font.label = list(color = "black", size = 9, 
+                             vjust = 0.5),               # Adjust label parameters
+           ggtheme = theme_pubr()                        # ggplot2 theme
+           ) +  
+         labs(x="Province", y="Number of observations", title = "Data per province")
+
+ggdotchart10PROVINCE
+
+```
+
+*Figure AC-AD*
+
+```{r}
+#Figure_AC - City top 20
+ggdotchart(DataSubset21, x = "cityprovince", y = "obscity",
+           color = "province",                       # Color by groups. For pallete: palette = c("#00AFBB", "#E7B800", "#FC4E07"), # Custom color palette
+           sorting = "descending",                       # Sort value in descending order
+           add = "segments",                             # Add segments from y = 0 to dots
+           rotate = TRUE,                                # Rotate vertically
+           group = "obscity",                           # Order by groups
+           dot.size = 6,                                 # Large dot size
+           label = round(DataSubset21$obscity),                        # Add mpg values as dot labels
+           font.label = list(color = "black", size = 9, 
+                             vjust = 0.5),               # Adjust label parameters
+           ggtheme = theme_pubr()                        # ggplot2 theme
+           ) +  
+         labs(x="City", y="Number of observations", title = "Data per city", subtitle = "Top 21 - >55 observations")
+
+ggsave("R_figures/Figure_AC.pdf", width= 9, height=7)
+
+#Figure_AD - City top 10
+ggdotchart10CITY <-ggdotchart(DataSubset8, x = "cityprovince", y = "obscity",
+           color = "province", 
+           # Color by groups. For pallete: palette = c("#00AFBB", "#E7B800", "#FC4E07"), # Custom color palette
+           sorting = "descending",                       # Sort value in descending order
+           add = "segments",                             # Add segments from y = 0 to dots
+           rotate = TRUE,                                # Rotate vertically
+           group = "obscity",                           # Order by groups
+           dot.size = 6,                                 # Large dot size
+           label = round(DataSubset8$obscity),                        # Add mpg values as dot labels
+           font.label = list(color = "black", size = 9, 
+                             vjust = 0.5),               # Adjust label parameters
+           ggtheme = theme_pubr()                        # ggplot2 theme
+           ) +  
+         labs(x="City", y="Number of observations", title = "Data per city", subtitle = "Top 10 - >90 observations")
+
+ggdotchart10CITY
+  
+ggsave("R_figures/Figure_AD.pdf", width= 9, height=7)
+```
+
+> Use one of both
+
+*Figure AE-AF*
+
+```{r}
+#Figure_AE - Zip top 20
+ggdotchart(DataSubset22, x = "cityprovince", y = "obszip",
+           color = "province",                       # Color by groups. For pallete: palette = c("#00AFBB", "#E7B800", "#FC4E07"), # Custom color palette
+           sorting = "descending",                       # Sort value in descending order
+           add = "segments",                             # Add segments from y = 0 to dots
+           rotate = TRUE,                                # Rotate vertically
+           group = "cityprovince",                           # Order by groups
+           dot.size = 6,                                 # Large dot size
+           label = round(DataSubset22$obszip),                        # Add mpg values as dot labels
+           font.label = list(color = "black", size = 9, 
+                             vjust = 0.5),               # Adjust label parameters
+           ggtheme = theme_pubr()                        # ggplot2 theme
+           ) +  
+         labs(x="City", y="Number of observations", title = "Data per zip code", subtitle = "Top 20", caption = "Dot per zip code \n Enschede has two zip codes with value 24")
+
+ggsave("R_figures/Figure_AE.pdf", width= 9, height=7)
+
+#Figure_AF - Zip top 10
+ggdotchart10ZIP <-ggdotchart(DataSubset13, x = "cityprovince", y = "obszip",
+           color = "province",                       # Color by groups. For pallete: palette = c("#00AFBB", "#E7B800", "#FC4E07"), # Custom color palette
+           sorting = "ascending",                       # Sort value in descending order
+           add = "segments",                             # Add segments from y = 0 to dots
+           rotate = TRUE,                                # Rotate vertically
+           group = "obszip",                           # Order by groups
+           dot.size = 6,                                 # Large dot size
+           label = round(DataSubset13$obszip),                        # Add mpg values as dot labels
+           font.label = list(color = "black", size = 9, 
+                             vjust = 0.5),               # Adjust label parameters
+           ggtheme = theme_pubr()                        # ggplot2 theme
+           ) +  
+         labs(x="City", y="Number of observations", title = "Data per zip code", subtitle = "Top 10", caption = "Dot per zip code")
+
+ggdotchart10ZIP 
+
+ggsave("R_figures/Figure_AF.pdf", width= 9, height=7)
+```
+
+> Use one of both
+
+_______________________________
+
+*Figure AG-AH*
+
+```{r}
+#Figure_AG - Location top 20
+ggdotchart(DataSubset23, x = "cityprovince", y = "obslocation",
+           color = "province",                       # Color by groups. For pallete: palette = c("#00AFBB", "#E7B800", "#FC4E07"), # Custom color palette
+           sorting = "descending",                       # Sort value in descending order
+           add = "segments",                             # Add segments from y = 0 to dots
+           rotate = TRUE,                                # Rotate vertically
+           group = "cityprovince",                           # Order by groups
+           dot.size = 6,                                 # Large dot size
+           label = round(DataSubset23$obslocation),                        # Add mpg values as dot labels
+           font.label = list(color = "black", size = 9, 
+                             vjust = 0.5),               # Adjust label parameters
+           ggtheme = theme_pubr()                        # ggplot2 theme
+           ) +  
+         labs(x="City", y="Number of observations", title = "Data per location", subtitle = "Top 20", caption = "Dot per location")
+
+ggsave("R_figures/Figure_AG.pdf", width= 9, height=7)
+
+#Figure_AH - Location top 10
+ggdotchart10LOCATION <-ggdotchart(DataSubset20, x = "cityprovince", y = "obslocation",
+           color = "province",                       # Color by groups. For pallete: palette = c("#00AFBB", "#E7B800", "#FC4E07"), # Custom color palette
+           sorting = "ascending",                       # Sort value in descending order
+           add = "segments",                             # Add segments from y = 0 to dots
+           rotate = TRUE,                                # Rotate vertically
+           group = "obslocation",                           # Order by groups
+           dot.size = 6,                                 # Large dot size
+           label = round(DataSubset20$obslocation),                        # Add mpg values as dot labels
+           font.label = list(color = "black", size = 9, 
+                             vjust = 0.5),               # Adjust label parameters
+           ggtheme = theme_pubr()                        # ggplot2 theme
+           ) +  
+         labs(x="City", y="Number of observations", title = "Data per location", subtitle = "Top 10", caption = "Dot per location")
+
+ggdotchart10LOCATION
+
+ggsave("R_figures/Figure_AH.pdf", width= 9, height=7)
+```
+
+> Use one of both
+
+_________________________
+
+###### All scales - top locations
+
+All locations (on all three scales) is displayed in one graph, using the selected graph type from the previous section. 
+
+Used the following (slight changes to the top 10 data in the figures discussed above):
+
+```{r}
+ggdotchart10PROVINCE <- ggdotchart(ProvinceInfo, x = "province", y = "obs",
+           color = "green4",                       # Color by groups. For pallete: palette = c("#00AFBB", "#E7B800", "#FC4E07"), # Custom color palette
+           sorting = "ascending",                       # Sort value in descending order
+           add = "segments",                             # Add segments from y = 0 to dots
+           rotate = TRUE,                                # Rotate vertically
+           group = "obs",                           # Order by groups
+           dot.size = 7,                                 # Large dot size
+           label = round(ProvinceInfo$obs),                        # Add mpg values as dot labels
+           font.label = list(color = "gold1", size = 8, 
+                             vjust = 0.5),               # Adjust label parameters
+           ggtheme = theme_pubr()                        # ggplot2 theme
+           ) +  
+         labs(x="Province", y="Number of observations", title="Province scale")
+ggdotchart10CITY<-ggdotchart(DataSubset8, x = "cityprovince", y = "obscity",
+           color = "green4",                       # Color by groups. For pallete: palette = c("#00AFBB", "#E7B800", "#FC4E07"), # Custom color palette
+           sorting = "descending",                       # Sort value in descending order
+           add = "segments",                             # Add segments from y = 0 to dots
+           rotate = TRUE,                                # Rotate vertically
+           group = "obscity",                           # Order by groups
+           dot.size = 7,                                 # Large dot size
+           label = round(DataSubset8$obscity),                        # Add mpg values as dot labels
+           font.label = list(color = "gold1", size = 8, 
+                             vjust = 0.5),               # Adjust label parameters
+           ggtheme = theme_pubr()                        # ggplot2 theme
+           ) +  
+         labs(x="City", y="Number of observations", title="City scale")
+ggdotchart10ZIP<-ggdotchart(DataSubset13, x = "cityprovince", y = "obszip",
+           color = "green4",                       # Color by groups. For pallete: palette = c("#00AFBB", "#E7B800", "#FC4E07"), # Custom color palette
+           sorting = "descending",                       # Sort value in descending order
+           add = "segments",                             # Add segments from y = 0 to dots
+           rotate = TRUE,                                # Rotate vertically
+           group = "cityprovince",                           # Order by groups
+           dot.size = 7,                                 # Large dot size
+           label = round(DataSubset13$obszip),                        # Add mpg values as dot labels
+           font.label = list(color = "gold1", size = 8, 
+                             vjust = 0.5),               # Adjust label parameters
+           ggtheme = theme_pubr()                        # ggplot2 theme
+           ) +  
+         labs(x="City", y="Number of observations",caption = "Dot per zip code", title="Zip code scale")
+ggdotchart10LOCATION<-ggdotchart(DataSubset20, x = "cityprovince", y = "obslocation",
+           color = "green4",                       # Color by groups. For pallete: palette = c("#00AFBB", "#E7B800", "#FC4E07"), # Custom color palette
+           sorting = "ascending",                       # Sort value in descending order
+           add = "segments",                             # Add segments from y = 0 to dots
+           rotate = TRUE,                                # Rotate vertically
+           group = "obslocation",                           # Order by groups
+           dot.size = 7,                                 # Large dot size
+           label = round(DataSubset20$obslocation),                        # Add mpg values as dot labels
+           font.label = list(color = "gold1", size = 8, 
+                             vjust = 0.5),               # Adjust label parameters
+           ggtheme = theme_pubr()                        # ggplot2 theme
+           ) +  
+         labs(x="City", y="Number of observations",caption = "Dot per location", title="Street scale")
+
+```
+
+*Figure_AI*
+
+```{r}
+#Figure_AI - Combined top 10's
+title <- ggdraw() + draw_label("Observations per location scale", fontface='bold')
+plots<- plot_grid(ggdotchart10PROVINCE, ggdotchart10CITY, ggdotchart10ZIP, ggdotchart10LOCATION, labels= "AUTO")
+plot_grid(title, plots, ncol=1, rel_heights=c(0.1, 1))
+
+ggsave("R_figures/Figure_AI.pdf", width= 12, height=9)
+
+```
+
+```{r, eval=F}
+#or try
+grid.arrange(ggdotchart10PROVINCE, ggdotchart10CITY, ggdotchart10ZIP, ggdotchart10LOCATION)
+ggsave("R_figures/Figure_AI_b.pdf", width= 9, height=9)
+````
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Shannon/Relative diversity
+
+## Start
+_____________________
+
+Plots that will be used are marked with "> use"
+
+### Packages
+_____________________
+
+Load at the beginning of every session.
+
+```{r}
+library(readxl)
+library(ggplot2)
+library(carData)
+library(car)
+library(RColorBrewer)
+library(htmltools)
+library(ggpubr)
+library(gridExtra) #for combining plots
+library(cowplot) #for combining plots
+library(reshape2) #for reordering variable for ggplots
+```
+
+### Data
+_____________________
+
+Within the Stoepplantjes dataset (stoep), three location scales are established: location (street with or without number, buildings, etc), zip code and city. Each scale has its own advantages. On one hand, the more specific the scale, the more information is encoded in its data. On the other hand, it is harder to validate a specific scale. Besides the best scale for the Stoepplantjes Data, the locations will be matched with data from the Floron Eindejaars Plantenjacht (PJ). The possibility to find matching locations in the PJ set is not weighted in the selection for the best scale in the Stoep data. However, for the Shannon diversity analysis it is important that enough locations can be matched. 
+
+The scale selection was done by data analysis, statistical rules of thumb ,and critical thinking. The summary of this selection is as followed:
+
+* City: 
+  + (+) All data has city info
+  + (+) Highest possibility to find matching data in PJ data
+  - (-) Not specific
+  
+* Zip code: 
+  + (+) Relative specific
+  - (-) Much data lost
+  
+* Location: 
+  + (+) Most specific
+  - (-) Hard to order(*)
+  - (-) Much data lost
+  
+(*) The street or builiding discription can vary a lot (e.g. with or without house number, with or without additional building info, etc). If the location description does not match it will be devided into different factor levels. Resulting in labour intensive valdition (by hand) through the levels.
+
+> City and zip code scale were selected as most valuable and useful. For these scales, the location selection was done in Excel ('date_Location selection.xlsx' & 'date_StoepVsFloron.xlsx'). A more detailed explanation on the establishment of the Shannon can be found in 'date_analysis.docx'. 
+
+> The final selection of the Shannon diversity data can be found in 'date_Location selection.xlsx' in tabs: 'ShannonDiv' & 'ShannonDiv_selection'. The difference between these tabs is that the selection tab excludes all locations with < 30 observations (not statistically valid when used). All data that is used in R was copied to one file: 'date_summaryR.xlsx'. This includes all data above, and data used in other R files of the project. The data that will be loaded into R is the Shannon diversity selection data: 
+
+```{r}
+# Shannon diversity data
+Shannon <- read_excel("~/Documents/Universiteit/4. Internships/Hortus 2023/Data/Data versioning/05_11_summaryR.xlsx", 
+    sheet = "ShannonDiv_selection")
+```
+
+For each data point the following variables are included:
+
+* The data set that was used for the establishing of the shannon diversity,
+* The scale of the data (city or zip code),
+* The name of the location (either a city or a zip code),
+* The total plant abundance,
+* The Shannon diversity (H/relative diversity), 
+* The species richness,
+* If the location has more than 30 observations, and could thus be marked as statistically valid when used in a analysis (note that all non statistically valid locations are excluded from the selection data 'ShannonDiv_selection' and are only included in 'ShannonDiv'), 
+* If both versions of a location (stoep and PJ) are present in the data and thus comparable (if N: the location can only be used to compare within the same data set (within) and cannot be compared to its corresponding location in the other data set (between)), as can be seen in the table below.
+
+```{r}
+print(Shannon)
+```
+
+_____________________
+
+## Analysis Intro
+_____________________
+
+In general a model goes like: 
+   $$response~<-~explanatory~+~explanatory~+~etc$$
+For the analysis of the shannon diversity this results in:
+   $$Shannon~<-~location~+~dataset~+~etc$$
+
+As locations is an explanatory factor, an ANCOVA will be used for the analysis of the Shannon diversity
+
+### Subset creation
+
+First, the data will be selected per variable level of interest by creating subsets: 
+
+**Subset** | **Dataset** | **Scale** |**Additional**
+--------------- | ------------|----------|-------------
+ShannonSubset1 | Stoep | All | -
+ShannonSubset2 | PJ | All | - 
+ShannonSubset3 | All | City | - 
+ShannonSubset4 | All | City | Only if comparable = yes
+ShannonSubset5| Stoep | City |-   
+ShannonSubset6 | PJ | City | - 
+ShannonSubset7 | All | Zip | - 
+ShannonSubset8 | Stoep | Zip | -  
+
+                
+No subsets are made for the all (comparable) zip codes in the PJ set due to lack of data. 
+
+*Subset codes*
+
+```{r}
+ShannonSubset1 <- Shannon[which(Shannon$Dataset=='Stoepplantjes'),] # 
+ShannonSubset2 <- Shannon[which(Shannon$Dataset=='EindejaarsPlantenjacht'),] #
+ShannonSubset3 <- Shannon[which(Shannon$Scale=='City'),] # 
+ShannonSubset4 <- Shannon[which(Shannon$Scale=='City' & Shannon$Comparable=='Y'),] #
+ShannonSubset5 <- Shannon[which(Shannon$Scale=='City' & Shannon$Dataset=='Stoepplantjes'),]
+ShannonSubset6 <- Shannon[which(Shannon$Scale=='City' & Shannon$Dataset=='EindejaarsPlantenjacht'),]  #
+ShannonSubset7 <- Shannon[which(Shannon$Scale=='Zip'),] #
+ShannonSubset8 <- Shannon[which(Shannon$Scale=='Zip' & Shannon$Dataset=='Stoepplantjes'),] #
+```
+
+> In all subsets, species diversity is included. Both the relative diversity and the species richness can be tested, using these subsets. 
+If it would add value. All of the subsets can also be used to analyse the abundance per location.
+
+_______________
+
+## Shannon diversity
+
+For the analysis of any of the subsets, the models need to be analyzed to see if there is need for any editing. See Chapter 'Data Prints' for an overview on the different subsets.
+
+__________________
+
+**General Workflow**
+
+@. Data Analysis 
+  - Data diagnostics (quality of data)
+  - Data structure and summary
+  - Visual inspection (plot), if needed
+  - Model specification
+@. Model diagnostics
+  - Homogeneity of variance 
+  - Normal distribution residuals
+  - Check for outliers -> extreme values
+@. Model statistics
+  - Run 'correct' test
+  - Visualization of data
+  
+__________________
+
+**Used codes**
+
+Below, the codes that were used in this file are explained:
+
+```{r, eval=F}
+#Homogeneity variance check 1/2 
+residualPlots(Model, layout = c(2,1), id = TRUE)
+
+#Homogeneity variance check 2/2 
+ncvTest(Model) 
+
+#Normal distribution residuals 1/2
+shapiro.test(Model$resid) # H0: residuals are normally distributed
+
+#Normal distribution residuals 2/2
+qqPlot(Model$residuals, id = TRUE) 
+
+#Extreme values 1/2
+influenceIndexPlot(Model) #Motivation for taking out extreme value as outlier: Labjournal error, Cook's distance > 0.5, hatvalues > 2.5 times hatvalue mean
+which(hatvalues(Model) > 2.5*mean(hatvalues(Model))) #check which hatvalues exceed the 2.5-times-mean limit 
+hatvalues(Model)
+
+#Extreme values 2/2
+outlierTest(Model) # Bonferroni p < 0.05 is motivation to call extreme point an outlier
+```
+
+__________________
+
+**Homogeneity variance check 1/2**
+
+* The residualPlots create 2 or 3 plots in which the distribution of residuals is plotted. This plot is used as visual test for the homogeneity of the variance
+* 'id = TRUE' is used to call the names of the most extreme value in the plot
+
+**Homogeneity variance check 2/2** 
+
+* ncvTest tests the homogeneity of the variance
+* H0: homoscedacity
+
+**Normal distribution residuals 1/2**
+
+* shapiro.test is used to test the normallity of the residuals
+* H0: residuals are normally distributed
+
+**Normal distribution residuals 2/2**
+
+* In the qqPlot the residuals of the model are plotted to see if residuals are within confidence region and thus normally distributed 
+* 'id = TRUE' is used to call the names of the most extreme value in the plot
+
+**Extreme values 1/2**
+
+* influenceIndexPlot gives 4 plots with the Cook's distance, the Standardized residuals, Bonferroni p-value, and hat-values
+* These plots are used for the identification of potential outliers
+* Motivation for taking out extreme value as outlier if Cook's distance > 0.5
+* Motivation for taking out extreme value as outlier if hat-value > 2.5x hat-value-mean
+* Motivation for taking out extreme value as outlier if Bonferroni p-value < 0.05 (see Extreme values 2/2)
+* If only one of the above is happening, it should be discussed if the value is worth taking out
+* 'which(hatvalues...' is used to call the data that exceed the 2.5x-hat-value-mean limit. 
+* Identifying the exact hat-value with 'hatvalues'
+
+**Extreme values 2/2**
+
+* The outlierTest calls the p-value and Bonferroni p of extreme points (potential outliers)
+* Motivation for taking out extreme value as outlier if Bonferroni p-value < 0.05 is motivation to call extreme point an outlier. Often dispite the results of the influenceIndexPlot. 
+
+____________________
+
+### Data Analysis
+
+Loading the data and checking its structure are also part of the data analysis part. However, these tasks were done previously (earlier in this file or in excel during the data editing) and are thus not included in this section. Further, all NA values were taken out of the data before importing the data into R. The only step left in this section is model specification. 
+
+###### Model specification
+________________________
+
+For each subset of the Shannon data, a seperate model is created. These models are named corresponding to the name of the subset (Model_ShanSub#). All starting models will be Linear Models. Model diagnositics might suggest a different model, resulting in the creation of a new type of model (Model_ShanSub#_2, Model_ShanSub#_3, etc.). An overview of the models that gave not errors and did not need any (more) editing can be found in '3.2.7 Final Models'. These models are used for the Model statistics in the next chapter.
+
+**Round 1**
+
+```{r}
+#Model specification per subset
+Model_ShanSub1 <- lm(Rel_div ~ Scale + Location + Total_abun, data = ShannonSubset1)  #Stoep
+Model_ShanSub2 <- lm(Rel_div ~ Scale + Location + Total_abun, data = ShannonSubset2)  #PJ
+Model_ShanSub3 <- lm(Rel_div ~ Dataset + Location + Total_abun, data = ShannonSubset3) #City 
+Model_ShanSub4 <- lm(Rel_div ~ Dataset + Location + Total_abun, data = ShannonSubset4)  #City and comparable between Stoep and PJ
+Model_ShanSub5 <- lm(Rel_div ~ Location + Total_abun, data = ShannonSubset5)  #Stoep, city
+Model_ShanSub6 <- lm(Rel_div ~ Location + Total_abun, data = ShannonSubset6) #PJ, city
+Model_ShanSub7 <- lm(Rel_div ~ Dataset + Location + Total_abun, data = ShannonSubset7)#Zip  
+Model_ShanSub8 <- lm(Rel_div ~ Location + Total_abun, data = ShannonSubset8)  #Stoep, zip
+```
+
+> Most of these models turned out to be not usable due to errors. - See '3.2.2. Problem inspection' for more info.
+
+________________________
+
+**Round 2 - 3**
+
+> Used to test where the errors came from - See '3.2.2. Problem inspection'.
+
+________________________
+
+**Round 4**
+
+For further explanation, on e.g. names of the models, see '3.2.2. Problem inspection'. 
+
+```{r}
+#Model specification round 4
+Model_ShanSub3.4 <- lm(Rel_div ~ Dataset + Location , data = ShannonSubset3)  #Both datasets, City scale (still gave error, thus the models below were created)
+
+#Model specification round 4.1
+Model_ShanSub3.4.1 <- lm(Rel_div ~ Dataset , data = ShannonSubset3) #Both datasets, City scale 
+
+#Model specification round 4.2
+Model_ShanSub3.4.2 <- lm(Rel_div ~ Location , data = ShannonSubset3) #Both datasets, City scale 
+
+#Model specification round 4.3
+Model_ShanSub3.4.3 <- lm(Rel_div ~ Location , data = ShannonSubset4)  #Both datasets, City scale only comparable
+```
+
+See '3.2.4 Problem inspection' for the explanation of model created below. See '4.2 Different Subsets' for an overview of all created subsets.  
+
+```{r}
+#Upload new (correct) data 
+ShannonSubset9 <- read_excel("~/Documents/Universiteit/4. Internships/Hortus 2023/Data/Data versioning/05_11_summaryR.xlsx", sheet = "ShannonDiv_CompCityOnly")
+
+#Model specification round 4.3.2
+Model_ShanSub9.4.3.2 <- lm(Rel_div ~ Location , data = ShannonSubset9)  #Both datasets, City scale only comparable - correct data!
+```
+
+**Round 5**
+
+For further explanation see 'Round 4.3.2' >'Next Step' and 'Round 5'. 
+```{r}
+#Upload new (correct) data 
+ShannonSubset10 <- read_excel("~/Documents/Universiteit/4. Internships/Hortus 2023/Data/Data versioning/05_11_summaryR.xlsx", sheet = "ShannonDiv_zip")
+
+#Model specification round 5
+Model_ShanSub10.5.1 <- lm(Rel_div ~ Location , data = ShannonSubset10)  #Only stoep data, Zip scale
+```
+
+```{r}
+#Upload new (correct) data 
+ShannonSubset11 <- read_excel("~/Documents/Universiteit/4. Internships/Hortus 2023/Data/Data versioning/05_11_summaryR.xlsx", sheet = "ShannonDiv_zip")
+
+#Model specification round 5
+Model_ShanSub11.5 <- lm(Rel_div ~ Location , data = ShannonSubset11)  #Only stoep data, Zip scale
+```
+________________________
+
+### Model diagnostics
+
+The next section is dedicated to inspecting the characteristics of the models and to investigate if the models are usable, reliable, or in need of data editing. This is done per model. 
+___________________
+
+###### Round 1
+
+**Model_ShanSub1**
+
+```{r, eval=F}
+#Homogeneity var visual and test - NOT LOADED
+residualPlots(Model_ShanSub1, layout = c(3,1), id = TRUE)
+ncvTest(Model_ShanSub1) # p < 0.05 means heteroscedacity
+
+#Normal distribution residuals 1/2 - NOT LOADED
+shapiro.test(Model_ShanSub1$resid) # H0: residuals are normally distributed
+```
+```{r}
+#Normal distribution residuals 2/2
+library(car)
+qqPlot(Model_ShanSub1$residuals, id = TRUE) #see if residuals are within confindence region (id=TRUE -> name point)
+```
+```{r,eval=F}
+#Extreme values 1/2 - NOT LOADED
+influenceIndexPlot(Model_ShanSub1) #Motivation for taking out extreme value as outlier: Labjournal error, Cook's distance > 0.5, hatvalues > 2.5 times hatvalue mean
+```
+```{r}
+#Extreme values 2/2
+outlierTest(Model_ShanSub1) # Bonferroni p < 0.05 is motivation to call extreme point an outlier
+```
+
+> The residuals of Model_ShanSub1 give an error in the residualplots, shapiro-, and outliertests (therefore these are noted in a section that is not loaded). After inspection: the residuals are all '0' in thus subset. That all residuals are exactly '0' implicates that the model would be a perfect fit (also note that all the data aligns with the blue line). It is unlikely that the model fits perfect. I will inspect this later on.
+
+___________________
+
+**Model_ShanSub2**
+
+```{r, eval=F}
+#Homogeneity var visual and test - NOT LOADED
+residualPlots(Model_ShanSub2, layout = c(3,1), id = TRUE)
+ncvTest(Model_ShanSub2) # p < 0.05 means heteroscedacity
+
+#Normal distribution residuals 1/2 - NOT LOADED
+shapiro.test(Model_ShanSub2$resid) # H0: residuals are normally distributed
+```
+```{r}
+#Normal distribution residuals 2/2
+library(car)
+qqPlot(Model_ShanSub2$residuals, id = TRUE) #see if residuals are within confindence region (id=TRUE -> name point)
+```
+```{r,eval=F}
+#Extreme values 1/2 - NOT LOADED
+influenceIndexPlot(Model_ShanSub2) #Motivation for taking out extreme value as outlier: Labjournal error, Cook's distance > 0.5, hatvalues > 2.5 times hatvalue mean
+```
+```{r}
+#Extreme values 2/2
+outlierTest(Model_ShanSub2) # Bonferroni p < 0.05 is motivation to call extreme point an outlier
+```
+
+> The same problem as for Model_ShanSub1 appears here... These two models both include all data of one dataset. 
+
+___________________
+
+**Model_ShanSub3**
+
+```{r}
+#Homogeneity variance check 1/2
+residualPlots(Model_ShanSub3, layout = c(2,1), id = TRUE)
+```
+* The Total abundance plot (top) has dense data at the lower end op de scale. _Saturation? Outlier sensitive?_
+* #5 and #45 id
+```{r}
+#Homogeneity variance check 2/2
+ncvTest(Model_ShanSub3) # p < 0.05 means heteroscedacity (not desired)
+```
+* p >>> 0.05 -> Homoscedacity in variance
+```{r}
+#Normal distribution residuals 1/2
+shapiro.test(Model_ShanSub3$resid) # H0: residuals are normally distributed
+```
+* p >> 0.05 -> Residual normally distributed
+```{r}
+#Normal distribution residuals 2/2
+library(car)
+qqPlot(Model_ShanSub3$residuals, id = TRUE) #see if residuals are within confindence region (id=TRUE -> name point)
+```
+* Not linear distribution. Does not seem to be an issue, but it is remarkable (sinus)
+* #5 and #45 id
+```{r, eval=F}
+#Extreme values 1/2 - NOT LOADED
+influenceIndexPlot(Model_ShanSub3) #Motivation for taking out extreme value as outlier: Labjournal error, Cook's distance > 0.5, hatvalues > 2.5 times hatvalue mean
+```
+* Eventhough this code gives an error, the Cook's distance did load in R
+* Highest Cook's around 0.15 (#5 and #45) so no motivation to take out data based on the Cook's distance
+```{r}
+#Extreme values 2/2
+outlierTest(Model_ShanSub3) # Bonferroni p < 0.05 is motivation to call extreme point an outlier
+```
+* #45 has p < 0.05. However, no Bonferroni p < 0.05, so no motivation to take out data
+
+> influenceIndexPlots gives error: 'Error in xy.coords(x, y, xlabel, ylabel, log) : 
+  'x' and 'y' lengths differ'. Meaning the plotted variables do not allign. This might be because some locations are mentioned twice and some are mentioned once, but I am not sure -> the next model will confirm or deny this
+
+>> However, Model diagnostics no not suggest the need for data editing before used for model statistics
+
+_______________________
+
+**Model_ShanSub4**
+
+```{r}
+#Homogeneity variance check 1/2
+residualPlots(Model_ShanSub4, layout = c(2,1), id = TRUE)
+```
+* The Total abundance plot (top) has dense data at the lower end op de scale. _Saturation? Outlier sensitive?_
+* #4 and #39 id
+```{r}
+#Homogeneity variance check 2/2
+ncvTest(Model_ShanSub4) # p < 0.05 means heteroscedacity (not desired)
+```
+* p >>> 0.05 -> Homoscedacity in variance
+```{r}
+#Normal distribution residuals 1/2
+shapiro.test(Model_ShanSub4$resid) # H0: residuals are normally distributed
+```
+* p >>> 0.05 -> Residual normally distributed
+```{r}
+#Normal distribution residuals 2/2
+library(car)
+qqPlot(Model_ShanSub4$residuals, id = TRUE) #see if residuals are within confindence region (id=TRUE -> name point)
+```
+* Not linear distribution. Does not seem to be an issue, but it is remarkable (sinus)
+* #4 and #39 id
+```{r, eval=F}
+#Extreme values 1/2 - NOT LOADED
+influenceIndexPlot(Model_ShanSub4) #Motivation for taking out extreme value as outlier: Labjournal error, Cook's distance > 0.5, hatvalues > 2.5 times hatvalue mean
+```
+* Eventhough this code gives an error, the Cook's distance did load in R
+* Highest Cook's around 0.15 (#4 and #39) so no motivation to take out data based on the Cook's distance
+```{r}
+#Extreme values 2/2
+outlierTest(Model_ShanSub4) # Bonferroni p < 0.05 is motivation to call extreme point an outlier
+```
+* #4 has p < 0.05. However, Bonferroni p >>> 0.05, so no motivation to take out data
+
+> influenceIndexPlot gives the same error. Same data as ShannonSubset3, but only with locations that are present in the both datasets. I do not know what the error is based on. I will further inspect this later. 
+
+>> However, Model diagnostics no not suggest the need for data editing before used for model statistics
+
+_________________________
+
+**Model_ShanSub5**
+
+```{r,eval=F}
+#Homogeneity variance check 1/2 - NOT LOADED
+residualPlots(Model_ShanSub5, layout = c(2,1), id = TRUE)
+```
+```{r,eval=F}
+#Homogeneity variance check 2/2 - NOT LOADED
+ncvTest(Model_ShanSub5) # p < 0.05 means heteroscedacity (not desired)
+```
+```{r,eval=F}
+#Normal distribution residuals 1/2
+shapiro.test(Model_ShanSub5$resid) # H0: residuals are normally distributed
+```
+```{r}
+#Normal distribution residuals 2/2
+library(car)
+qqPlot(Model_ShanSub5$residuals, id = TRUE) #see if residuals are within confindence region (id=TRUE -> name point)
+```
+Same issue as Model_ShanSub1&2...
+```{r, eval=F,}
+#Extreme values 1/2 - NOT LOADED
+influenceIndexPlot(Model_ShanSub5) #Motivation for taking out extreme value as outlier: Labjournal error, Cook's distance > 0.5, hatvalues > 2.5 times hatvalue mean
+```
+Error in plot.window(...) : need finite 'ylim' values
+```{r}
+#Extreme values 2/2
+outlierTest(Model_ShanSub5) # Bonferroni p < 0.05 is motivation to call extreme point an outlier
+```
+
+> Same issue as earlier. All these models have in common that Dataset is not included as variable since they only contain one of the datasets.
+
+_________________________
+
+**Model_ShanSub6**
+
+```{r, eval=F}
+#Homogeneity variance check 1/2
+residualPlots(Model_ShanSub6, layout = c(2,1), id = TRUE)
+```
+```{r, eval=F}
+#Homogeneity variance check 2/2
+ncvTest(Model_ShanSub6) # p < 0.05 means heteroscedacity (not desired)
+```
+```{r, eval=F}
+#Normal distribution residuals 1/2
+shapiro.test(Model_ShanSub6$resid) # H0: residuals are normally distributed
+```
+Error in shapiro.test(Model_ShanSub6$resid) : 
+  all 'x' values are identical
+```{r, eval=F}
+#Normal distribution residuals 2/2
+library(car)
+qqPlot(Model_ShanSub6$residuals, id = TRUE) #see if residuals are within confindence region (id=TRUE -> name point)
+```
+```{r, eval=F}
+#Extreme values 1/2 - NOT LOADED
+influenceIndexPlot(Model_ShanSub6) #Motivation for taking out extreme value as outlier: Labjournal error, Cook's distance > 0.5, hatvalues > 2.5 times hatvalue mean
+```
+Error in plot.window(...) : need finite 'ylim' values
+```{r}
+#Extreme values 2/2
+outlierTest(Model_ShanSub6) # Bonferroni p < 0.05 is motivation to call extreme point an outlier
+```
+
+> Same issue... If it is indeed the issue that the dataset is all named the same (is this 'x'? - see shapiro.test), the next model will not have this problem, but Model_ShanSub8 will.
+
+_______________________
+
+**Model_ShanSub7**
+
+```{r,eval=F}
+#Homogeneity variance check 1/2 - NOT LOADED
+residualPlots(Model_ShanSub7, layout = c(2,1), id = TRUE)
+```
+```{r,eval=F}
+#Homogeneity variance check 2/2 - NOT LOADED
+ncvTest(Model_ShanSub7) # p < 0.05 means heteroscedacity (not desired)
+```
+```{r, eval=F}
+#Normal distribution residuals 1/2
+shapiro.test(Model_ShanSub7$resid) # H0: residuals are normally distributed
+```
+Still the same error
+```{r}
+#Normal distribution residuals 2/2
+library(car)
+qqPlot(Model_ShanSub7$residuals, id = TRUE) #see if residuals are within confindence region (id=TRUE -> name point)
+```
+Same issue..
+```{r, eval=F}
+#Extreme values 1/2 - NOT LOADED
+influenceIndexPlot(Model_ShanSub7) #Motivation for taking out extreme value as outlier: Labjournal error, Cook's distance > 0.5, hatvalues > 2.5 times hatvalue mean
+```
+Error in plot.window(...) : need finite 'ylim' values
+```{r}
+#Extreme values 2/2
+outlierTest(Model_ShanSub7) # Bonferroni p < 0.05 is motivation to call extreme point an outlier
+```
+
+> Theory on last model disproven. Maybe I should take a different approach on the models. First, lets run the last model
+
+_________________________
+
+**Model_ShanSub8**
+
+```{r eval=F}
+#Homogeneity variance check 1/2
+residualPlots(Model_ShanSub8, layout = c(2,1), id = TRUE)
+```
+```{r eval=F}
+#Homogeneity variance check 2/2
+ncvTest(Model_ShanSub8) # p < 0.05 means heteroscedacity (not desired)
+```
+```{r eval=F}
+#Normal distribution residuals 1/2
+shapiro.test(Model_ShanSub8$resid) # H0: residuals are normally distributed
+```
+```{r}
+#Normal distribution residuals 2/2
+library(car)
+qqPlot(Model_ShanSub8$residuals, id = TRUE) #see if residuals are within confindence region (id=TRUE -> name point)
+```
+Same issue
+```{r, eval=F}
+#Extreme values 1/2 - NOT LOADED
+influenceIndexPlot(Model_ShanSub8) #Motivation for taking out extreme value as outlier: Labjournal error, Cook's distance > 0.5, hatvalues > 2.5 times hatvalue mean
+```
+Same issue
+```{r}
+#Extreme values 2/2
+outlierTest(Model_ShanSub8) # Bonferroni p < 0.05 is motivation to call extreme point an outlier
+```
+
+> Same issue
+
+_________________________
+
+###### **Problem inspection**
+
+The model diagnostics above (Round 1) gave quite errors. Below, you find an overview of models that did work, Including some characteristics of the data in these models. Another approach on the models is probably needed and tried out below the table.
+
+**Model based on** | **Too much errors to used** | **Included only 1 datasets** |**Includes Zip**
+--------------- | ------------|----------|-------------
+ShannonSubset1 | Yes | Yes | *Yes*
+ShannonSubset2 | Yes | Yes | *Yes* 
+ShannonSubset3 | No | No | No
+ShannonSubset4 | No | No | No
+ShannonSubset5| Yes | *Yes* | No  
+ShannonSubset6 | Yes | *Yes* | No
+ShannonSubset7 | Yes | *Yes* | *Yes*
+ShannonSubset8 | Yes | No | *Yes* 
+
+_________________________
+
+To test some options:
+
+**Round 2** 
+
+```{r}
+#Model specification round 2
+Model_ShanSub1.2 <- lm(Rel_div ~ Scale + Location , data = ShannonSubset1)  #Stoep
+```
+* Model diagnostics (deleted the code and outcome) gave same outcome... So it the problem does not come from the only continuous variable in the models 'Total_abundance' 
+
+_________________________
+
+**Round 3**
+
+```{r}
+#Model specification round 3
+Model_ShanSub1.3 <- lm(Rel_div ~ Scale , data = ShannonSubset1)  #Stoep
+```
+
+```{r}
+#Homogeneity variance check 1/2 
+residualPlots(Model_ShanSub1.3, layout = c(2,1), id = TRUE)
+```
+* Gives a warning message and residuals are split into two grops, which makes sense since 'Scale' is a two level factor.
+```{r}
+#Homogeneity variance check 2/2 
+ncvTest(Model_ShanSub1.3) # p < 0.05 means heteroscedacity (not desired)
+```
+* p > 0.05 -> Homoscedacity in variance 
+```{r}
+#Normal distribution residuals 1/2
+shapiro.test(Model_ShanSub1.3$resid) # H0: residuals are normally distributed
+```
+* p >>> 0.05 -> residuals are normally distributed
+```{r}
+#Normal distribution residuals 2/2
+library(car)
+qqPlot(Model_ShanSub1.3$residuals, id = TRUE) #see if residuals are within confindence region (id=TRUE -> name point)
+```
+* Nicely withing confidence region
+```{r}
+#Extreme values 1/2
+influenceIndexPlot(Model_ShanSub1.3) #Motivation for taking out extreme value as outlier: Labjournal error, Cook's distance > 0.5, hatvalues > 2.5 times hatvalue mean
+```
+* Cook's distance is fine
+* Bonferroni seems fine
+* Hatvalues gives high values for #1-#10. Further inspection:
+```{r}
+which(hatvalues(Model_ShanSub1.3) > 2.5*mean(hatvalues(Model_ShanSub1.3))) #check which hatvalues exceed the 2.5-times-mean limit 
+hatvalues(Model_ShanSub1.3)
+```
+* #1-#10 have higher values than limit
+* All the same value: 0.10
+```{r}
+#Extreme values 2/2
+outlierTest(Model_ShanSub1.3) # Bonferroni p < 0.05 is motivation to call extreme point an outlier
+```
+* #47 p <<< 0.05, but Bonferroni p >> 0.05 so not enough motivation to excluded data
+
+> This model seems to work. However: this specific model is just for a subset. If models with multiple variables do not work, there is no point in using the data of the subsets instead of the total Shannon data. 
+
+>> #1-#10 are the zip code data... I expect that these were the problem all along. Going back to the models I used in Round 1, I found out that all models with Zip data gave too much errors to use. This does not explain why Model_ShanSub5 & Model_ShanSub6 did not work. But an earlier hypothesis is about error being related to the fact that only one dataset was included. Which is the case for both Model_ShanSub5 & Model_ShanSub6.
+
+_________________________
+
+**Next step**
+
+Model diagnostics will be done again, with different models (named Round 4, as Round 2 and 3 did not give the desired result). There models will be created in '3.1 Data Analysis' > '3.1.1 Model specification' > 'Round 4'. The models will be created from ShannonSubsets that did not include any zip code data, thus are the same as the original data without zip. What will be done with the zip code data will be discussed with the supervisior. 
+
+_________________________
+
+###### Round 4
+
+We now know that the zip code data can not be included due to errors and we expect that both dataset need to be included. This round is to check if extracting the data from the subsets without Zip codes or 1 data set could work. ShannonSubset3 includes all city data and therefore is the same as the original data excluding the zip code data.
+
+```{r}
+#Model specification round 4
+Model_ShanSub3.4 <- lm(Rel_div ~ Dataset + Location , data = ShannonSubset3)  
+```
+
+```{r}
+#Homogeneity variance check 1/2 
+residualPlots(Model_ShanSub3.4, layout = c(2,1), id = TRUE)
+```
+```{r}
+#Homogeneity variance check 2/2 
+ncvTest(Model_ShanSub3.4) # p < 0.05 means heteroscedacity (not desired)
+```
+* p > 0.05 -> Homoscedacity in variance 
+```{r}
+#Normal distribution residuals 1/2
+shapiro.test(Model_ShanSub3.4$resid) # H0: residuals are normally distributed
+```
+* p >> 0.05 -> residuals are normally distributed
+```{r}
+#Normal distribution residuals 2/2
+library(car)
+qqPlot(Model_ShanSub3.4$residuals, id = TRUE) #see if residuals are within confindence region (id=TRUE -> name point)
+```
+```{r,eval=FALSE}
+#Extreme values 1/2
+influenceIndexPlot(Model_ShanSub3.4) #Motivation for taking out extreme value as outlier: Labjournal error, Cook's distance > 0.5, hatvalues > 2.5 times hatvalue mean
+```
+Still same error 
+```{r}
+#Extreme values 2/2
+outlierTest(Model_ShanSub3.4) # Bonferroni p < 0.05 is motivation to call extreme point an outlier
+```
+
+> This model seems to work. However: there is still this error with the influenceIndexPlot I would like to get rid of. Therefore, the next model will be with only 1 variable at a time.
+
+_________________________
+
+**Round 4.1**
+
+```{r}
+#Model specification round 4.1
+Model_ShanSub3.4.1 <- lm(Rel_div ~ Dataset , data = ShannonSubset3) 
+```
+
+```{r}
+#Homogeneity variance check 1/2 
+residualPlots(Model_ShanSub3.4.1, layout = c(2,1), id = TRUE)
+```
+Warning, which is logical since Dataset is a factor. 
+
+See what a boxplot would look like:
+```{r}
+Boxplot <- ggplot(ShannonSubset3, aes(Dataset, Rel_div, color=factor(Dataset), group=Dataset)) + geom_boxplot() + xlab("Dataset") + ylab("Relative diversity")
+Boxplot
+```
+Or in contrast with the species richness
+```{r}
+ggplot_reldiv.sprich <- ggplot(ShannonSubset3, aes(Rel_div, Sp_richness, color=factor(Dataset), group=Dataset)) + geom_smooth(method = "lm", se=F) + xlab("Species Richness") + ylab("Relative diversity")
+ggplot_reldiv.sprich
+```
+
+```{r}
+#Homogeneity variance check 2/2 
+ncvTest(Model_ShanSub3.4.1) # p < 0.05 means heteroscedacity (not desired)
+
+#Normal distribution residuals 1/2
+shapiro.test(Model_ShanSub3.4.1$resid) # H0: residuals are normally distributed
+
+#Normal distribution residuals 2/2
+library(car)
+qqPlot(Model_ShanSub3.4.1$residuals, id = TRUE) #see if residuals are within confindence region (id=TRUE -> name point)
+
+#Extreme values 1/2
+influenceIndexPlot(Model_ShanSub3.4.1) #Motivation for taking out extreme value as outlier: Labjournal error, Cook's distance > 0.5, hatvalues > 2.5 times hatvalue mean
+```
+
+* All looks good, except for the hatvalues. Further inspection:
+```{r}
+which(hatvalues(Model_ShanSub3.4.1) > 2.5*mean(hatvalues(Model_ShanSub3.4.1))) #check which hatvalues exceed the 2.5-times-mean limit 
+hatvalues(Model_ShanSub3.4.1)
+```
+* No issue with hatvalues. Just to groups of data (non differ 2.5 times from the hatvalue mean)
+```{r}
+#Extreme values 2/2
+outlierTest(Model_ShanSub3.4.1) # Bonferroni p < 0.05 is motivation to call extreme point an outlier
+```
+* #37 *** p value, but NS Bonferroni p
+
+> This model does not have any problems. A t-test would be enough to test the difference between the datasets
+
+___________________
+
+**Round 4.2**
+
+```{r}
+#Model specification round 4.1
+Model_ShanSub3.4.2 <- lm(Rel_div ~ Location , data = ShannonSubset3) 
+```
+
+```{r}
+#Homogeneity variance check 1/2 
+residualPlots(Model_ShanSub3.4.2, layout = c(2,1), id = TRUE)
+```
+Warning, which is logical because Location is a factor with a lot of levels
+```{r}
+#Homogeneity variance check 2/2 
+ncvTest(Model_ShanSub3.4.2) # p < 0.05 means heteroscedacity (not desired)
+
+#Normal distribution residuals 1/2
+shapiro.test(Model_ShanSub3.4.2$resid) # H0: residuals are normally distributed
+
+#Normal distribution residuals 2/2
+library(car)
+qqPlot(Model_ShanSub3.4.2$residuals, id = TRUE) #see if residuals are within confindence region (id=TRUE -> name point)
+```
+```{r,eval=FALSE}
+#Extreme values 1/2
+influenceIndexPlot(Model_ShanSub3.4.2) #Motivation for taking out extreme value as outlier: Labjournal error, Cook's distance > 0.5, hatvalues > 2.5 times hatvalue mean
+```
+This gives still the same error: Error in xy.coords(x, y, xlabel, ylabel, log) : 
+  'x' and 'y' lengths differ
+```{r}
+#Extreme values 2/2
+outlierTest(Model_ShanSub3.4.2) # Bonferroni p < 0.05 is motivation to call extreme point an outlier
+```
+
+> This model does not have any problems, except for the influenceIndexPlot. I will try what happens if only the comparable cities are used.
+
+_________________________
+
+**Round 4.3**
+
+```{r}
+#Model specification round 4.3
+Model_ShanSub3.4.3 <- lm(Rel_div ~ Location , data = ShannonSubset4)  
+```
+
+```{r}
+#Homogeneity variance check 1/2 
+residualPlots(Model_ShanSub3.4.3, layout = c(2,1), id = TRUE)
+```
+Warning, which is logical because Location is a factor with a lot of levels
+```{r}
+#Homogeneity variance check 2/2 
+ncvTest(Model_ShanSub3.4.3) # p < 0.05 means heteroscedacity (not desired)
+
+#Normal distribution residuals 1/2
+shapiro.test(Model_ShanSub3.4.3$resid) # H0: residuals are normally distributed
+
+#Normal distribution residuals 2/2
+library(car)
+qqPlot(Model_ShanSub3.4.3$residuals, id = TRUE) #see if residuals are within confindence region (id=TRUE -> name point)
+```
+```{r,eval=FALSE}
+#Extreme values 1/2
+influenceIndexPlot(Model_ShanSub3.4.3) #Motivation for taking out extreme value as outlier: Labjournal error, Cook's distance > 0.5, hatvalues > 2.5 times hatvalue mean
+```
+This gives still the same error: Error in xy.coords(x, y, xlabel, ylabel, log) : 
+  'x' and 'y' lengths differ
+```{r}
+#Extreme values 2/2
+outlierTest(Model_ShanSub3.4.3) # Bonferroni p < 0.05 is motivation to call extreme point an outlier
+```
+
+> Same error
+
+_________________________
+
+###### **Problem inspection**
+
+Found an error in the dataset. The full explanation can be found in the labjournal (11 mei 2023). The cities did not line up properly. Fixed this and created a new tab: ShannonDiv_CompCityOnly to try and fix the error of Round 4.2-Round 4.3. Next, I will re-run the Round 4.3 with the new data. 
+
+_________________________
+
+###### Round 4.3.2
+
+The correct data and the new model was created in the Model specification. Below, a copy of these code:
+```{r, eval=FALSE}
+#Upload new (correct) data 
+ShannonSubset9 <- read_excel("~/Documents/Universiteit/4. Internships/Hortus 2023/Data/Data versioning/05_11_summaryR.xlsx", sheet = "ShannonDiv_CompCityOnly")
+
+#Model specification round 4.3.2
+Model_ShanSub9.4.3.2 <- lm(Rel_div ~ Location , data = ShannonSubset9)  #Both data sets, City scale only comparable - correct data!
+```
+
+```{r}
+#Homogeneity variance check 1/2 
+residualPlots(Model_ShanSub9.4.3.2, layout = c(2,1), id = TRUE)
+```
+Warning, which is logical because Location is a factor with a lot of levels
+```{r}
+#Homogeneity variance check 2/2 
+ncvTest(Model_ShanSub9.4.3.2) # p < 0.05 means heteroscedacity (not desired)
+
+#Normal distribution residuals 1/2
+shapiro.test(Model_ShanSub9.4.3.2$resid) # H0: residuals are normally distributed
+
+#Normal distribution residuals 2/2
+library(car)
+qqPlot(Model_ShanSub9.4.3.2$residuals, id = TRUE) #see if residuals are within confindence region (id=TRUE -> name point)
+```
+```{r}
+#Extreme values 1/2
+influenceIndexPlot(Model_ShanSub9.4.3.2) #Motivation for taking out extreme value as outlier: Labjournal error, Cook's distance > 0.5, hatvalues > 2.5 times hatvalue mean
+```
+
+> NO MORE ERROR!
+
+* All looks good, except for the hatvalues. Further inspection:
+```{r}
+which(hatvalues(Model_ShanSub9.4.3.2) > 2.5*mean(hatvalues(Model_ShanSub9.4.3.2))) #check which hatvalues exceed the 2.5-times-mean limit 
+hatvalues(Model_ShanSub9.4.3.2)
+```
+* All good
+```{r}
+#Extreme values 2/2
+outlierTest(Model_ShanSub9.4.3.2) # Bonferroni p < 0.05 is motivation to call extreme point an outlier
+```
+* All good
+
+> This model does not have any problems. A ANOVA would be enough to test the difference between the datasets. The error that i found will not have effected the other models, because the error was only in the variable 'Compararible' and was only incuded in ShannonSubset4 (and now in ShannonSubset9 as well)
+
+_________________
+
+Also check for the comparison between cities 
+
+The correct data and the new model was created in the Model specification. Below, a copy of these code:
+```{r}
+#Model specification round 4.3.3
+Model_ShanSub9.4.3.3 <- lm(Rel_div ~  Dataset, data = ShannonSubset9)  #Both data sets, City scale only comparable - correct data!
+```
+
+```{r,}
+#Homogeneity variance check 1/2 
+residualPlots(Model_ShanSub9.4.3.3, layout = c(2,1), id = TRUE)
+```
+Warning, which is logical because Location is a factor with a lot of levels
+```{r}
+#Homogeneity variance check 2/2 
+ncvTest(Model_ShanSub9.4.3.3) # p < 0.05 means heteroscedacity (not desired)
+
+#Normal distribution residuals 1/2
+shapiro.test(Model_ShanSub9.4.3.3$resid) # H0: residuals are normally distributed
+
+#Normal distribution residuals 2/2
+library(car)
+qqPlot(Model_ShanSub9.4.3.3$residuals, id = TRUE) #see if residuals are within confindence region (id=TRUE -> name point)
+```
+```{r, eval=F}
+#Extreme values 1/2
+influenceIndexPlot(Model_ShanSub9.4.3.3) #Motivation for taking out extreme value as outlier: Labjournal error, Cook's distance > 0.5, hatvalues > 2.5 times hatvalue mean
+```
+* All looks good
+```{r}
+which(hatvalues(Model_ShanSub9.4.3.3) > 2.5*mean(hatvalues(Model_ShanSub9.4.3.3))) #check which hatvalues exceed the 2.5-times-mean limit 
+hatvalues(Model_ShanSub9.4.3.3)
+```
+* All good
+```{r}
+#Extreme values 2/2
+outlierTest(Model_ShanSub9.4.3.3) # Bonferroni p < 0.05 is motivation to call extreme point an outlier
+```
+* All good
+
+> This model does not have any problems
+
+_________________________
+
+**Next Step**
+
+I want to see if I can make a model with only the Zip code data of the Stoepplantjes data. To be sure this will go right, a new tab was made in the 'date_summaryR.xlsx' 
+
+_________________________
+
+###### Round 5
+
+The new model was created in the Model specification. Below, a copy of thus code:
+```{r, eval=FALSE}
+#Upload new (correct) data 
+ShannonSubset10 <- read_excel("~/Documents/Universiteit/4. Internships/Hortus 2023/Data/Data versioning/05_11_summaryR.xlsx", sheet = "ShannonDiv_zip")
+
+#Model specification round 5
+Model_ShanSub10.5.1 <- lm(Rel_div ~ Location , data = ShannonSubset10)  #Only stoep data, Zip scale
+```
+
+```{r}
+#Homogeneity variance check 1/2 
+residualPlots(Model_ShanSub10.5.1, layout = c(2,1), id = TRUE)
+
+#Homogeneity variance check 2/2 
+ncvTest(Model_ShanSub10.5.1) # p < 0.05 means heteroscedacity (not desired)
+
+#Normal distribution residuals 1/2
+shapiro.test(Model_ShanSub10.5.1$resid) # H0: residuals are normally distributed
+
+#Normal distribution residuals 2/2
+library(car)
+qqPlot(Model_ShanSub10.5.1$residuals, id = TRUE) #see if residuals are within confindence region (id=TRUE -> name point)
+
+#Extreme values 1/2
+influenceIndexPlot(Model_ShanSub10.5.1) #Motivation for taking out extreme value as outlier: Labjournal error, Cook's distance > 0.5, hatvalues > 2.5 times hatvalue mean
+```
+
+* All looks good, except for the #10 on the Cook's distance (>1.2) and hat values. Further inspection:
+```{r}
+which(hatvalues(Model_ShanSub10.5.1) > 2.5*mean(hatvalues(Model_ShanSub10.5.1))) #check which hatvalues exceed the 2.5-times-mean limit 
+hatvalues(Model_ShanSub10.5.1)
+```
+* #10 hat valiue is over the limit of 2.5 times. 
+```{r}
+#Extreme values 2/2
+outlierTest(Model_ShanSub10.5.1) # Bonferroni p < 0.05 is motivation to call extreme point an outlier
+```
+* All good
+
+> 10 datapoint are not much. 10 is idicated as potential outlier with the Cook's distance and the hat value limits. 
+
+Took out #10 (in excel). Re-run the code to see if model is sufficient now.
+
+```{r, eval=FALSE}
+#Upload new (correct) data 
+ShannonSubset11 <- read_excel("~/Documents/Universiteit/4. Internships/Hortus 2023/Data/Data versioning/05_11_summaryR.xlsx", sheet = "ShannonDiv_zip_10")
+
+#Model specification round 5
+Model_ShanSub11.5 <- lm(Rel_div ~ Location , data = ShannonSubset11)  #Only stoep data, Zip scale - #10
+```
+
+```{r}
+#Homogeneity variance check 1/2 
+residualPlots(Model_ShanSub11.5, layout = c(2,1), id = TRUE)
+
+#Homogeneity variance check 2/2 
+ncvTest(Model_ShanSub11.5) # p < 0.05 means heteroscedacity (not desired)
+
+#Normal distribution residuals 1/2
+shapiro.test(Model_ShanSub11.5$resid) # H0: residuals are normally distributed
+
+#Normal distribution residuals 2/2
+library(car)
+qqPlot(Model_ShanSub11.5$residuals, id = TRUE) #see if residuals are within confindence region (id=TRUE -> name point)
+
+#Extreme values 1/2
+influenceIndexPlot(Model_ShanSub11.5) #Motivation for taking out extreme value as outlier: Labjournal error, Cook's distance > 0.5, hatvalues > 2.5 times hatvalue mean
+```
+
+* All looks good, except for the #1 on the Cook's distance (>0.6) and hat values. Further inspection:
+```{r}
+which(hatvalues(Model_ShanSub11.5) > 2.5*mean(hatvalues(Model_ShanSub11.5))) #check which hatvalues exceed the 2.5-times-mean limit 
+hatvalues(Model_ShanSub11.5)
+```
+* #1 hat valiue is **not* over the limit of 2.5 times, so there is not enough motivation (Cook's distance alone) to exclude this point from the data.
+```{r}
+#Extreme values 2/2
+outlierTest(Model_ShanSub11.5) # Bonferroni p < 0.05 is motivation to call extreme point an outlier
+```
+* All good
+
+> This model (the model without #10 (zip code 9713)) shows no issues and can be used for model statistics
+
+_________________________
+
+###### **Final Models**
+
+```{r}
+#Model specification round 4.1
+Model_ShanSub3.4.1 <- lm(Rel_div ~ Dataset , data = ShannonSubset3) #Both datasets, City scale (incl not comparable locations)
+
+#Model specification round 4.3.2
+Model_ShanSub9.4.3.2 <- lm(Rel_div ~ Location , data = ShannonSubset9)  #Both datasets, City scale only comparable - correct data!
+
+#Model specification round 4.3.3
+Model_ShanSub9.4.3.3 <- lm(Rel_div ~ Dataset, data = ShannonSubset9)  #Both data sets, City scale only comparable - correct data!
+
+#Model specification round 5
+Model_ShanSub11.5 <- lm(Rel_div ~ Location , data = ShannonSubset11)  #Only stoep data, Zip scale - #10
+```
+_________________________
+
+### Model statistics
+
+The models Model_ShanSub3.4.1, Model_ShanSub9.4.3.2, and Model_ShanSub11.5 will be used for the model statistics. These model include data from ShannonSubset3, ShannonSubset9, and ShannonSubset11. See 'Data prints' > 'Different Subsets'. In the chapters below, each model is treat separately. 
+
+_________________________
+
+###### All city data - *Model_ShanSub3.4.1*
+
+ShannonSubset3 includes all city data from both data sets, both the comparable cities and the cities that only have enough data in the Stoep data. A t-test should be used to analyse the difference between the data sets. Note: the difference between both sets could also be tested in with the comparable city data only (subset 9). The only difference than would be that stoep data has as much data as PJ. However, for the t-test, this extra data for Stoep (in subset3) only adds value. Therefore, it was not chosen to also test the difference in data set of the data in subset 9.
+
+_________________________
+
+**The model** 
+
+```{r, eval=F}
+#Model specification round 4.1
+Model_ShanSub3.4.1 <- lm(Rel_div ~ Dataset , data = ShannonSubset3) #Both datasets, City scale (incl not comparable locations)
+```
+
+_________________________
+
+**Hypotheses**
+
+It is expected that the data of the Pavement Plant Project (here called Stoep) is sufficient to calculate the relative diversity. The data of the Eindejaars Plantenjacht by Floron (here called PJ) includes almost 10 time as much data. Despite the difference in method, e.g. limitations in time/period/etc, the data of Eindejaars Plantenjacht is used as a guideline for the reliability of the calculated relative diversity. 
+
+H0: There is no significant difference between the relative diveristy of the Pavement Plant Project (Stoep) and Eindejaars Plantenjacht (PJ). 
+
+_________________________
+
+**Test**
+
+To compare the response (relative diversity) between the two levels (Stoep & PJ) of the explanatory factor (Dataset), a t-test was used. 
+```{r}
+t.test(Rel_div ~ Dataset , data = ShannonSubset3)
+```
+
+> p >> 0.05 
+
+> > **There is no significant difference between the mean of the relative diversity in the Pavement Plant Project (Stoep) and Eindejaars Plantenjacht (PJ).** 
+
+_________________________
+
+**Visualisation**
+
+*FigureDiv_A*
+
+```{r}
+FigureDiv_A <- ggplot(ShannonSubset3, aes(Dataset, Rel_div, color=factor(Dataset), group=Dataset)) + 
+  geom_boxplot() + labs(x="Dataset", y="Relative diversity", title = "Relative diversity per dataset", caption = "p-value = 0.159") + 
+  scale_colour_discrete(name="Dataset",labels = c("Eindejaars Plantenjacht", "Stoepplantjes Project")) + 
+  theme(legend.position="bottom", legend.title = element_text(size=10, face="bold"), plot.title = element_text(size=12, face="bold")) + geom_signif(comparisons = list(c("EindejaarsPlantenjacht", "Stoepplantjes")), map_signif_level=TRUE)
+                                      
+FigureDiv_A + geom_point()
+
+ggsave("R_figures/FigureDiv_A.pdf", width= 6, height=6) #to save the plot in working directory!
+```
+
+_________________________
+
+###### All comparable city data - *Model_ShanSub9.4.3.2 and Model_ShanSub9.4.3.3*
+
+ShannonSubset9 includes comparable city data from both data sets. An ANOVA should be used to analyse the data.
+
+_________________________
+
+**The model**
+
+```{r, eval=F}
+#Model specification round 4.3.2
+Model_ShanSub9.4.3.2 <- lm(Rel_div ~ Location , data = ShannonSubset9)  #Both datasets, City scale only comparable 
+```
+
+_________________________
+
+**Hypotheses**
+
+It is expected that there is no difference between locations (using both sets).
+
+H0: There is no significant difference between the relative diveristy of the different locations.
+    
+_________________________
+
+**Test**
+
+To compare the response (relative diversity) between the all levels (the different locations) of the explanatory factor (Location), an anova was used.
+
+```{r}
+summary(Model_ShanSub9.4.3.2) #or summary.aov for instance
+```
+
+> p < 0.05 (*) 
+
+> > **There is a significant difference between the relative diversity of the locations** *It seems Almere is (****) , Tilburg compared to Almere is (***)
+
+To find out which locations differ from which, a post hoc was used. 
+
+```{r}
+TukeyHSD(aov(Model_ShanSub9.4.3.2))
+```
+
+> **Shows no significance between specific cities** 
+
+>> I do not know why a significance was then given in the first place...
+
+_________________________
+
+**Visualisation** 
+
+*FigureDiv_B*
+
+```{r}
+FigureDiv_B <- ggplot(ShannonSubset9, aes(x = reorder(Location, -Rel_div), y=Rel_div, label=Location, colour=Dataset)) + 
+  geom_point() +facet_grid() + labs(x="City", y="Relative diversity", title = "Relative diversity per city", caption = "Cities are not in fixed order, \nso no regression can be visualized in the plot", subtitle ="In descending order") + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=8)) + 
+  theme(legend.position="bottom", legend.title = element_text(size=10, face="bold"), plot.title = element_text(size=12, face="bold"))
+
+FigureDiv_B 
+
+ggsave("R_figures/FigureDiv_B.pdf", width= 8, height=6) #to save the plot in working directory!
+```
+
+```{r}
+FigureDiv_B_2 <- ggplot(ShannonSubset9, aes(x = reorder(Location, -Rel_div), y=Rel_div, label=Location, colour=Dataset)) + 
+  geom_point() +facet_grid() + labs(x="City", y="Relative diversity", title = "Relative diversity per city and dataset", subtitle ="In descending order", caption = "Cities are not in fixed order, \nso no regression can be visualized in the plot")+ theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=8)) + 
+  theme(legend.position='none', legend.title = element_text(size=10, face="bold"), plot.title = element_text(size=12, face="bold")) + facet_wrap(~Dataset)
+
+FigureDiv_B_2
+
+ggsave("R_figures/FigureDiv_B_2.pdf", width= 10, height=6) #to save the plot in working directory!
+```
+
+_________________________
+
+*Model_ShanSub9.4.3.3* 
+
+ShannonSubset9 includes comparable city data from both data sets. An ANOVA should be used to analyse the data.
+
+_________________________
+
+**The model**
+
+
+```{r, eval=F}
+#Model specification round 4.3.3
+Model_ShanSub9.4.3.3 <- lm(Rel_div ~ Dataset, data = ShannonSubset9)  #Both data sets, City scale only comparable - correct data!
+```
+
+_________________________
+
+**Hypotheses**
+
+It is expected that the data of the Pavement Plant Project (here called Stoep) does not differ from the data of the Eindejaars Plantenjacht by Floron (here called PJ). In addition it is expected that the relative diversity does not differ between locations. These expectations are tested in previous models. Resulting in the expectation that this model also does not differ between both datasets. 
+
+H0: There is no significant difference between the relative diveristy of the locations of between the Pavement Plant Project (Stoep) and Eindejaars Plantenjacht (PJ).
+    
+_________________________
+
+**Test**
+
+To compare the response (relative diversity) between the all levels (the different locations) of the explanatory factor (Location), an anova was used.
+
+```{r}
+summary(Model_ShanSub9.4.3.3) #or summary.aov for instance
+```
+
+> !!! - XXXXXXXXXXXXXX -> ik kom er even niet uit... 
+Dataset verglijken met elkaar maar met alle punten van de locaties erin... 
+en locaties indiv verschillen tussen dataset?
+Optie voor latere analyse: incl city opp of #kmhokken, dan kan je de grote gebruiken om de order van de cities te fixeren, een regressie lijn te maken en wat te zeggen over de shannon ivm met de grootte van de stad!!!
+
+_________________________
+
+**Visualisation** 
+
+*FigureDiv_C*
+
+```{r,eval=F}
+FigureDiv_C <- ggplot(...)
+
+FigureDiv_C 
+
+ggsave("R_figures/FigureDiv_C.pdf", width= 6, height=6) #to save the plot in working directory!
+```
+
+_________________________
+
+
+###### Zip code data Stoepplantjes data - *Model_ShanSub11.5*
+
+_________________________
+
+**The model**
+
+```{r, eval=F}
+#Model specification round 5
+Model_ShanSub11.5 <- lm(Rel_div ~ Location , data = ShannonSubset11)  #Only stoep data, Zip scale - #10
+```
+
+_________________________
+
+**Hypotheses**
+
+    It is expected that the data of the Pavement Plant Project (here called Stoep) is sufficient to calculate the relative diversity. The data of the Eindejaars Plantenjacht by Floron (here called PJ) includes almost 10 time as much data. Despite the difference in method, e.g. limitations in time/period/etc, the data of Eindejaars Plantenjacht is used as a guideline for the reliability of the calculated relative diversity. 
+
+    H0: There is no significant difference between the relative diveristy of the zip code locations of the Pavement Plant Project (Stoep). 
+
+_________________________
+
+**Test**
+
+To compare the response (relative diversity) between the all levels (the different locations) of the explanatory factor (Location), an anova was used.
+
+```{r}
+summary(Model_ShanSub11.5) #or summary.aov for instance
+```
+
+> No significant difference can be found
+
+_________________________
+
+**Visualisation**
+
+*FigureDiv_D*
+
+```{r}
+FigureDiv_D <- ggplot(ShannonSubset11, aes(x = reorder(Location, -Rel_div), y=Rel_div, label=Location)) + 
+  geom_point() +facet_grid() + labs(x="Zip code", y="Relative diversity", title = "Relative diversity per zip code", caption = "Zip codes are not in fixed order, \nso no regression can be visualized in the plot ")+ theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=8)) + 
+  theme(plot.title = element_text(size=12, face="bold"))
+
+FigureDiv_D 
+
+ggsave("R_figures/FigureDiv_D.pdf", width= 6, height=6) #to save the plot in working directory!
+```
+
+_________________________
+
+## Species richness
+
+For this section of the analysis, the same workflow as for the shannon diveristy is used (incl general workflow and codes). Additional codes that were used in this section:
+
+**Transformation**, *Dealing with; non-equal variance/heteroscedacity*
+
+    y = x × ϵ  -->  y = x + ϵ
+
+  By taking log --> log ( y ) = log ( x × ϵ ) = log ( x ) + log ( ϵ )
+  AKA dependent data will become independent data
+
+- Most common:
+    1. Log-transformation
+    2. Arc sin Root
+    3. Box Cox (power transformation)
+        -> suggests which transformation might be best
+        
+```{r, eval=FALSE}
+library(car)
+boxCox(Response~Explanatory)
+```
+
+When λ =
+
+- -2 then $Response^{-2}$ transform
+- -1 then $Response^{-1}$ transform
+-  0 then $log(Response)$ transform
+-  1/3 then $Response^{1/3}$ transform
+-  1/2 then $Response^{1/2}$ transform
+-  1 then $Response^{1}$ transform
+-  2 then $Response^{2}$ transform
+
+NOTE: BoxCox will not always give a discrete number. Choose the best option. E.g. the closed line to the middle of the BoxCox and test the transformation for heteroscedacity (trail and error).
+
+__________________
+
+### Data Analysis
+
+Loading the data and checking its structure are also part of the data analysis part. However, these tasks were done previously (earlier in this file or in excel during the data editing) and are thus not included in this section. Further, all NA values were taken out of the data before importing the data into R. The only step left in this section is model specification. These models can be specified from the ShannonSubset series, since these subsets also include the species richness (and abundance).
+
+```{r}
+#Upload new (fool proof) data of ShannonSubset5 
+ShannonSubset12 <- read_excel("~/Documents/Universiteit/4. Internships/Hortus 2023/Data/Data versioning/05_15_summaryR.xlsx", sheet = "ShannonDiv_city")
+```
+
+Note: dit subset zal met terugwerkende kracht worden gebruikt in de analyse van de shannon diversity. Verder gebruik is uitlegd onder het kopje Data Print
+
+________________________
+
+
+###### Model specification
+
+________________________
+
+For each subset of the species richness data, seperate models are created (like for the Shannon data). These models are named corresponding to the name of the subset (Model_ShanSub#). All starting models will be Linear Models. Model diagnositics might suggest a different model, resulting in the creation of a new type of model (Model_ShanSub#_2, Model_ShanSub#_3, etc.). In the section with Shannon data it was pointed out that some subsets were not useful (taken the results of the analysis of the shannon diversity into account). These subset will be used in this section.
+
+_________________________
+
+**Round 1**
+
+```{r}
+#Model specification per subset
+Model_SpRichSub3 <- lm(Sp_richness ~ Dataset + Location, data = ShannonSubset3) #City, all
+Model_SpRichSub9 <- lm(Sp_richness ~ Dataset + Location , data = ShannonSubset9)  #comparable city, both data sets 
+Model_SpRichSub10 <- lm(Sp_richness ~ Location, data = ShannonSubset10)  #Stoep, zip 
+Model_SpRichSub12 <- lm(Sp_richness ~ Location, data = ShannonSubset12)  #Stoep, city
+```
+
+> Only (potentially) valuable data is used.
+
+________________________
+
+
+### Model diagnostics
+
+The next section is dedicated to inspecting the characteristics of the models and to investigate if the models are usable, reliable, or in need of data editing. This is done per model. 
+
+___________________
+
+###### Round 1
+
+**Model_SpRichSub3**
+
+```{r}
+#Homogeneity var visual and test - NOT LOADED
+residualPlots(Model_SpRichSub3, layout = c(3,1), id = TRUE)
+ncvTest(Model_SpRichSub3) # p < 0.05 means heteroscedacity
+```
+* p <<< 0.05 
+* Transformation needed
+
+```{r}
+#Transformation suggestion
+boxCox(Model_SpRichSub3)
+```
+* Response^{-1} seems the best option
+
+```{r}
+#1st transformation model
+Model_SpRichSub3.2 <- lm((Sp_richness^{-1}) ~ Dataset + Location, data = ShannonSubset3) #City, all
+```
+
+```{r}
+#Re-try: Homogeneity var visual and test - NOT LOADED
+residualPlots(Model_SpRichSub3.2, layout = c(3,1), id = TRUE)
+ncvTest(Model_SpRichSub3.2) # p < 0.05 means heteroscedacity
+```
+* Still heteroscedastic. Try again. 
+
+```{r}
+#Transformation suggestion (again)
+boxCox(Model_SpRichSub3)
+```
+* Try Response^{1/3}
+
+```{r}
+#2nd transformation model
+Model_SpRichSub3.3 <- lm(log(Sp_richness) ~ Dataset + Location, data = ShannonSubset3) #City, all
+```
+
+```{r}
+#Re-try: Homogeneity var visual and test - NOT LOADED
+residualPlots(Model_SpRichSub3.3, layout = c(3,1), id = TRUE)
+ncvTest(Model_SpRichSub3.3) # p < 0.05 means heteroscedacity
+```
+* No longer heteroscedacity
+
+```{r}
+#Normal distribution residuals 1/2 - NOT LOADED
+shapiro.test(Model_SpRichSub3.3$resid) # H0: residuals are normally distributed
+
+#Normal distribution residuals 2/2
+library(car)
+qqPlot(Model_SpRichSub3.3$residuals, id = TRUE) #see if residuals are within confindence region (id=TRUE -> name point)
+```
+```{r,eval=F}
+#Extreme values 1/2 - NOT LOADED
+influenceIndexPlot(Model_SpRichSub3.3) #Motivation for taking out extreme value as outlier: Labjournal error, Cook's distance > 0.5, hatvalues > 2.5 times hatvalue mean
+```
+* Error. Which makes sense (incl cities that are included once in the set). 
+
+```{r}
+#Extreme values 2/2
+outlierTest(Model_SpRichSub3.3) # Bonferroni p < 0.05 is motivation to call extreme point an outlier
+```
+* All good 
+
+> No problems with the model (that we did not know before)
+
+_________________________
+
+**Model_SpRichSub9**
+
+```{r}
+#Homogeneity var visual and test - NOT LOADED
+residualPlots(Model_SpRichSub9, layout = c(3,1), id = TRUE)
+ncvTest(Model_SpRichSub9) # p < 0.05 means heteroscedacity
+```
+* p <<< 0.05 
+* Transformation needed
+
+```{r}
+#Transformation suggestion
+boxCox(Model_SpRichSub9)
+```
+* Response^{-1} seems an option
+
+```{r}
+#1st transformation model
+Model_SpRichSub9.2 <- lm((Sp_richness^{-1}) ~ Dataset + Location, data = ShannonSubset9) #City, all
+```
+
+```{r}
+#Re-try: Homogeneity var visual and test - NOT LOADED
+residualPlots(Model_SpRichSub9.2, layout = c(3,1), id = TRUE)
+ncvTest(Model_SpRichSub9.2) # p < 0.05 means heteroscedacity
+```
+* Still heteroscedastic. Try again. 
+
+```{r}
+#Transformation suggestion (again)
+boxCox(Model_SpRichSub9)
+```
+* Try log(Response)
+
+```{r}
+#2nd transformation model
+Model_SpRichSub9.3 <- lm(log(Sp_richness) ~ Dataset + Location, data = ShannonSubset9) #City, all
+```
+
+```{r}
+#Re-try: Homogeneity var visual and test - NOT LOADED
+residualPlots(Model_SpRichSub9.3, layout = c(3,1), id = TRUE)
+ncvTest(Model_SpRichSub9.3) # p < 0.05 means heteroscedacity
+```
+* No longer heteroscedacity
+
+```{r}
+#Normal distribution residuals 1/2 - NOT LOADED
+shapiro.test(Model_SpRichSub9.3$resid) # H0: residuals are normally distributed
+
+#Normal distribution residuals 2/2
+library(car)
+qqPlot(Model_SpRichSub9.3$residuals, id = TRUE) #see if residuals are within confindence region (id=TRUE -> name point)
+
+#Extreme values 1/2 - NOT LOADED
+influenceIndexPlot(Model_SpRichSub9.3) #Motivation for taking out extreme value as outlier: Labjournal error, Cook's distance > 0.5, hatvalues > 2.5 times hatvalue mean
+```
+* Looks good 
+
+```{r}
+#Extreme values 2/2
+outlierTest(Model_SpRichSub9.3) # Bonferroni p < 0.05 is motivation to call extreme point an outlier
+```
+* All good 
+
+> No problem with the model
+
+_________________________
+
+**Model_SpRichSub10**
+
+```{r}
+#Homogeneity var visual and test 
+residualPlots(Model_SpRichSub10, layout = c(3,1), id = TRUE)
+ncvTest(Model_SpRichSub10) # p < 0.05 means heteroscedacity
+```
+
+```{r}
+#Normal distribution residuals 1/2 
+shapiro.test(Model_SpRichSub10$resid) # H0: residuals are normally distributed
+```
+* Residuals not normally distributed. Suggests a GLM. However. There are just 10 data points. You could argue if trying a GLM is even worth it...
+
+```{r}
+#Normal distribution residuals 2/2
+library(car)
+qqPlot(Model_SpRichSub10$residuals, id = TRUE) #see if residuals are within confindence region (id=TRUE -> name point)
+
+#Extreme values 1/2 
+influenceIndexPlot(Model_SpRichSub10) #Motivation for taking out extreme value as outlier: Labjournal error, Cook's distance > 0.5, hatvalues > 2.5 times hatvalue mean
+```
+* Hat value of # denfinetly to high
+
+```{r}
+#Extreme values 2/2
+outlierTest(Model_SpRichSub10) # Bonferroni p < 0.05 is motivation to call extreme point an outlier
+```
+* #10 not mentioned, so do not take the point out
+
+> A GLM is needed to use this model. However, is a GLM worth the effort for 10 data points?
+
+_________________________
+
+**Model_SpRichSub12** 
+
+```{r,eval=F}
+#Homogeneity var visual and test - NOT LOADED
+residualPlots(Model_SpRichSub12, layout = c(3,1), id = TRUE)
+ncvTest(Model_SpRichSub12) # p < 0.05 means heteroscedacity
+```
+* Shows same problem as before. I do not understand why to be fair...
+
+```{r,eval=F}
+#Normal distribution residuals 1/2 - NOT LOADED
+shapiro.test(Model_SpRichSub12$resid) # H0: residuals are normally distributed
+
+#Normal distribution residuals 2/2
+library(car)
+qqPlot(Model_SpRichSub12$residuals, id = TRUE) #see if residuals are within confindence region (id=TRUE -> name point)
+
+#Extreme values 1/2 - NOT LOADED
+influenceIndexPlot(Model_SpRichSub12) #Motivation for taking out extreme value as outlier: Labjournal error, Cook's distance > 0.5, hatvalues > 2.5 times hatvalue mean
+
+#Extreme values 2/2
+outlierTest(Model_SpRichSub12) # Bonferroni p < 0.05 is motivation to call extreme point an outlier
+```
+* All codes give Errors. I can not figure out why...
+
+> I can not figure out why it does not work... Might come back to this, or use the subset9
+
+_________________________
+
+
+###### **Final Models**
+
+```{r,eval=F}
+#Model specification per subset
+Model_SpRichSub3.3 <- lm(log(Sp_richness) ~ Dataset + Location, data = ShannonSubset3) #City, all
+Model_SpRichSub9.3 <- lm(log(Sp_richness) ~ Dataset + Location, data = ShannonSubset9) #comparable city, both data sets 
+
+Model_SpRichSub10 # only useful with GLM
+Model_SpRichSub12 # might be revisted later
+```
+
+_________________________
+
+### Model statistics
+
+The models Model_SpRichSub3.3 and Model_SpRichSub9.3will be used for the model statistics. These model include data from ShannonSubset3 and ShannonSubset9. See 'Data prints' > 'Different Subsets'. In the chapters below, each model is treat separately. 
+
+_________________________
+
+###### All city data - *Model_SpRichSub3.3*
+
+ShannonSubset3 includes all city data from both data sets, both the comparable cities and the cities that only have enough data in the Stoep data. A t-test should be used to analyse the difference between the data sets. Note: the difference between both sets could also be tested in with the comparable city data only (subset 9). The only difference than would be that stoep data has as much data as PJ. However, for the t-test, this extra data for Stoep (in subset3) only adds value. Therefore, it was not chosen to also test the difference in data set of the data in subset 9.
+
+_________________________
+
+**The model** 
+
+```{r, eval=F}
+#Model specification round 4.1
+Model_SpRichSub3.3 <- lm(log(Sp_richness) ~ Dataset + Location, data = ShannonSubset3) #Both datasets, City scale (incl not comparable locations)
+```
+
+_________________________
+
+**Hypotheses**
+
+    It is expected that the data of the Pavement Plant Project (here called Stoep) is sufficient to calculate the relative diversity. The data of the Eindejaars Plantenjacht by Floron (here called PJ) includes almost 10 time as much data. Despite the difference in method, e.g. limitations in time/period/etc, the data of Eindejaars Plantenjacht is used as a guideline for the reliability of the calculated relative diversity. 
+
+    H0: There is no significant difference between the relative diveristy of the Pavement Plant Project (Stoep) and Eindejaars Plantenjacht (PJ). 
+
+_________________________
+
+**Test**
+
+To compare the response (species richness) between the two levels (Stoep & PJ) of the explanatory factor (Dataset), a t-test was used. 
+```{r}
+t.test(Sp_richness ~ Dataset , data = ShannonSubset3)
+```
+
+> p < 0.01 
+
+> > **There is a significant difference between the mean of the species richness in the Pavement Plant Project (Stoep) and Eindejaars Plantenjacht (PJ).** 
+
+_________________________
+
+**Visualisation**
+
+*FigureDiv_E*
+
+```{r}
+FigureDiv_E <- ggplot(ShannonSubset3, aes(Dataset, Sp_richness, color=factor(Dataset), group=Dataset)) + geom_boxplot() + labs(x="Dataset", y="Species richness", title = "Species richness per dataset", caption = "p-value = 0.0109") + 
+  scale_colour_discrete(name="Dataset",labels = c("Eindejaars Plantenjacht", "Stoepplantjes Project")) + theme(legend.position="bottom", legend.title = element_text(size=10, face="bold"), plot.title = element_text(size=12, face="bold")) + geom_signif(comparisons = list(c("EindejaarsPlantenjacht", "Stoepplantjes")), map_signif_level=TRUE)
+                                      
+FigureDiv_E + geom_point()
+
+ggsave("R_figures/FigureDiv_E.pdf", width= 6, height=6) #to save the plot in working directory!
+```
+
+________________________
+
+###### All comparable city data - *Model_SpRichSub9.3*
+
+ShannonSubset9 includes comparable city data from both data sets. An ANOVA should be used to analyse the data.
+
+_________________________
+
+**The model**
+
+```{r, eval=F}
+#Model specification 
+Model_SpRichSub9.3 <- lm(log(Sp_richness) ~ Dataset + Location, data = ShannonSubset9) #Both datasets, City scale only comparable 
+```
+
+_________________________
+
+**Hypotheses**
+
+    It is expected that there is no difference between locations (using both sets).
+
+    H0: There is no significant difference between the relative diveristy of the different locations.
+    
+_________________________
+
+**Test**
+
+To compare the response (species richness) between the all levels (the different locations) of the explanatory factor (Location), an anova was used.
+
+```{r}
+summary(Model_SpRichSub9.3) #or summary.aov for instance
+```
+
+> p < 0.05 (*) 
+
+> > **There is a significant difference between the relative diversity of the locations** XXXX need to follow up?
+
+_________________________
+
+**Visualisation** 
+
+*FigureDiv_F*
+
+```{r}
+FigureDiv_F <- ggplot(ShannonSubset9, aes(x = reorder(Location, -Sp_richness), y=Sp_richness, label=Location, colour=Dataset)) + 
+  geom_point() +facet_grid() + labs(x="City", y="Species richness", title = "Species richness per city", caption = "Cities are not in fixed order, \nso no regression can be visualized in the plot", subtitle ="In descending order") + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=8)) + 
+  theme(legend.position="bottom", legend.title = element_text(size=10, face="bold"), plot.title = element_text(size=12, face="bold"))
+
+FigureDiv_F 
+
+ggsave("R_figures/FigureDiv_F.pdf", width= 8, height=6) #to save the plot in working directory!
+```
+
+```{r}
+FigureDiv_F_2 <- ggplot(ShannonSubset9, aes(x = reorder(Location, -Sp_richness), y=Sp_richness, label=Location, colour=Dataset)) + 
+  geom_point() +facet_grid() + labs(x="City", y="Species richness", title = "Species richness per city and dataset", subtitle ="In descending order", caption = "Cities are not in fixed order, \nso no regression can be visualized in the plot")+ theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=8)) + 
+  theme(legend.position='none', legend.title = element_text(size=10, face="bold"), plot.title = element_text(size=12, face="bold")) + facet_wrap(~Dataset)
+
+FigureDiv_F_2
+
+ggsave("R_figures/FigureDiv_F_2.pdf", width= 10, height=6) #to save the plot in working directory!
+```
+
+_________________________
+
+## Incl city area
+
+It will be interesting to test the data sets and locations according to their city area. I added this to the data, creating 2 new subsets: ShannonSubset13 and ShannonSubset14. The city area was added in Excel. *Note: for this section of the analysis it emphasized that it is assumed that the locations for the data accurate.* These subsets are further explained and in the Section Data Prints. 
+
+```{r}
+#Upload new data - city data comparable
+ShannonSubset13 <- read_excel("~/Documents/Universiteit/4. Internships/Hortus 2023/Data/Data versioning/05_15_summaryR.xlsx", sheet = "ShannonDiv_area_all")
+
+#Upload new data - city data stoep
+ShannonSubset14 <- read_excel("~/Documents/Universiteit/4. Internships/Hortus 2023/Data/Data versioning/05_15_summaryR.xlsx", sheet = "ShannonDiv_area")
+```
+
+```{r}
+#New models - city data comparable
+Model_SpRichSub13 <-  lm(Sp_richness ~ Dataset + Location + Area , data = ShannonSubset13)
+Model_SpRichSub13.3 <- lm(Sp_richness ~ Area , data = ShannonSubset13) 
+Model_ShanSub13 <-  lm(Rel_div ~ Dataset + Location + Area, data = ShannonSubset13)
+Model_ShanSub13.2 <- lm(Rel_div ~ Area , data = ShannonSubset13) 
+
+#New models - city data stoep
+Model_SpRichSub14 <- lm(Sp_richness ~ Location + Area, data = ShannonSubset14)
+Model_ShanSub14 <-  lm(Rel_div ~ Location + Area, data = ShannonSubset14)
+```
+
+### Model diagnostics
+
+The next section is dedicated to inspecting the characteristics of the models and to investigate if the models are usable, reliable, or in need of data editing. This is done per model. As area data was added and the models are checked before, this will be done briefly. 
+
+___________________
+
+###### Subset 13 
+
+**Model_SpRichSub13**
+
+```{r}
+#Homogeneity var visual and test - NOT LOADED
+residualPlots(Model_SpRichSub13, layout = c(3,1), id = TRUE)
+ncvTest(Model_SpRichSub13) # p < 0.05 means heteroscedacity
+```
+* p <<< 0.05 
+* Transformation needed
+
+```{r}
+#Transformation suggestion
+boxCox(Model_SpRichSub13)
+```
+* log(Response) seems the best option
+
+```{r}
+#1st transformation model
+Model_SpRichSub13.2 <- lm(log(Sp_richness) ~ Dataset + Location + Area , data = ShannonSubset13) #City, all
+```
+
+```{r}
+#Re-try: Homogeneity var visual and test 
+residualPlots(Model_SpRichSub13.2, layout = c(3,1), id = TRUE)
+ncvTest(Model_SpRichSub13.2) # p < 0.05 means heteroscedacity
+```
+* No longer heteroscedacity
+
+```{r}
+#Normal distribution residuals 1/2 - NOT LOADED
+shapiro.test(Model_SpRichSub13.2$resid) # H0: residuals are normally distributed
+
+#Normal distribution residuals 2/2
+library(car)
+qqPlot(Model_SpRichSub13.2$residuals, id = TRUE) #see if residuals are within confindence region (id=TRUE -> name point)
+
+#Extreme values 1/2 - NOT LOADED
+influenceIndexPlot(Model_SpRichSub13.2) #Motivation for taking out extreme value as outlier: Labjournal error, Cook's distance > 0.5, hatvalues > 2.5 times hatvalue mean
+```
+
+```{r}
+#Extreme values 2/2
+outlierTest(Model_SpRichSub13.2) # Bonferroni p < 0.05 is motivation to call extreme point an outlier
+```
+* All good 
+
+___________________
+
+**Model_ShanSub13**
+
+```{r}
+#Homogeneity var visual and test - NOT LOADED
+residualPlots(Model_ShanSub13, layout = c(3,1), id = TRUE)
+ncvTest(Model_ShanSub13) # p < 0.05 means heteroscedacity
+
+#Normal distribution residuals 1/2 - NOT LOADED
+shapiro.test(Model_ShanSub13$resid) # H0: residuals are normally distributed
+
+#Normal distribution residuals 2/2
+library(car)
+qqPlot(Model_ShanSub13$residuals, id = TRUE) #see if residuals are within confindence region (id=TRUE -> name point)
+
+#Extreme values 1/2 - NOT LOADED
+influenceIndexPlot(Model_ShanSub13) #Motivation for taking out extreme value as outlier: Labjournal error, Cook's distance > 0.5, hatvalues > 2.5 times hatvalue mean
+
+#Extreme values 2/2
+outlierTest(Model_ShanSub13) # Bonferroni p < 0.05 is motivation to call extreme point an outlier
+```
+* All good 
+
+___________________
+
+###### Relation sp rich and area
+
+*Model_SpRichSub13.3*
+
+```{r}
+#Homogeneity var visual and test -
+residualPlots(Model_SpRichSub13.3, layout = c(3,1), id = TRUE)
+ncvTest(Model_SpRichSub13.3) # p < 0.05 means heteroscedacity
+```
+* Heteroscadestic --> probably also log
+
+```{r}
+#1st transformation
+Model_SpRichSub13.4 <- lm(log(Sp_richness) ~ Area , data = ShannonSubset13) 
+```
+
+```{r}
+#Homogeneity var visual and test -
+residualPlots(Model_SpRichSub13.4, layout = c(3,1), id = TRUE)
+ncvTest(Model_SpRichSub13.4) # p < 0.05 means heteroscedacity
+```
+
+```{r}
+#Normal distribution residuals 1/2
+shapiro.test(Model_SpRichSub13.4$resid) # H0: residuals are normally distributed
+```
+> Suggests GLM 
+
+```{r}
+#Normal distribution residuals 2/2
+library(car)
+qqPlot(Model_SpRichSub13.4$residuals, id = TRUE) #see if residuals are within confindence region (id=TRUE -> name point)
+
+#Extreme values 1/2
+influenceIndexPlot(Model_SpRichSub13.4) #Motivation for taking out extreme value as outlier: Labjournal error, Cook's distance > 0.5, hatvalues > 2.5 times hatvalue mean
+
+#Extreme values 2/2
+outlierTest(Model_SpRichSub13.4) # Bonferroni p < 0.05 is motivation to call extreme point an outlier
+```
+* All good 
+
+> GLM needed :)
+
+**GLM**
+
+*Model_SpRichSub13.3.2*
+
+See for workflow, GLM at the end of the file.
+
+1. Model specification
+
+```{r, eval=FALSE}
+Model_SpRichSub13.3.GLM <- glm(Sp_richness ~ Area, family = poisson(link = "log"), data = ShannonSubset13)
+```
+
+2. Model visualisation
+
+```{r, eval=FALSE}
+# for Count ~ Concentration + Treatment, data = Poisson
+library(ggplot2)
+Model_SpRichSub13.3.GLM.gg <- ggplot(ShannonSubset13, aes(Area, Sp_richness)) + 
+  geom_smooth(method="glm",  method.args = list(family = poisson(link = "log"))) +
+  geom_point() + ggtitle("Log linkfunction Sp richness and Area")
+Model_SpRichSub13.3.GLM.gg
+```
+
+*There probably seems to be no linear regression and no continuous slope. Due to the fluctuation of slopes GLM uses rate of change. See below.*
+
+3. Model statistics
+
+```{r, eval = FALSE}
+summary(Model_SpRichSub13.3.GLM)
+```
+
+a. *not as aspected:*
+    Deviance Residuals = Variance Residuals
+  - Some sort of Sum of Squares. Minimized due to the use of Maximum Likelihood.
+  - Median should be around 0 and Min and Max should deviate approximately the same distance from median. 
+  
+b. ...
+    Estimate = slope, Estimate of interaction = slope difference 
+  - *Note: GLM uses rate of change instead of slope, therefore the rate of change needs to be calculated. See below. *
+
+c. ...
+    LM uses t-value, GLM uses z-value. Same calulation.
+
+d. *Area is ****
+    Concentration is N.S., but the interactions with Concentration are. Leave Conc in model.
+
+e.  *not a perfect fit*
+    Dispersion parameter Poisson is 1 means λ = 1. 
+  - Expecting to have a perfect fit when Res.dev.:Df = 1:1!
+  - Want to alter this value? "summary(ModelGLM, dispersion = desired value)"
+
+f.  *Residuals deviance > Df = overdispersion = not complex enough > type 1 error*
+    To be interpreted as dispersion parameter φ.
+  - Deviance explained: (Null deviance - residual deviance)/Null deviance
+  - Perfect fit of model when Residuals deviance = Df (see e.)
+  - Residuals deviance < Df = underdispersion = too complex > Type 2 error
+  - Residuals deviance > Df = overdispersion = not complex enough > type 1 error
+
+g. *A good fit*
+    Fisher Scoring: algorithm needed x steps to find the best fit.
+  - A Fisher score iteration of 4-8 is good
+  
+
+```{r}
+exp(0.0025639) # Exponent of slope to: estimate increase of species per unit area
+```
+
+NOTE: 1.30 means a rate +30%. So per unit area there is a 30% increase of Response (in this data set Species)
+
+> Per unit area there is an increase of 0,002% of species richness. 
+
+This, added to the ggplot from earlier, indicated not clear relation
+
+___________________
+
+*Model_ShanSub13.2*
+
+```{r}
+#Homogeneity var visual and test - NOT LOADED
+residualPlots(Model_ShanSub13.2, layout = c(3,1), id = TRUE)
+ncvTest(Model_ShanSub13.2) # p < 0.05 means heteroscedacity
+
+#Normal distribution residuals 1/2 - NOT LOADED
+shapiro.test(Model_ShanSub13.2$resid) # H0: residuals are normally distributed
+
+#Normal distribution residuals 2/2
+library(car)
+qqPlot(Model_ShanSub13.2$residuals, id = TRUE) #see if residuals are within confindence region (id=TRUE -> name point)
+
+#Extreme values 1/2 - NOT LOADED
+influenceIndexPlot(Model_ShanSub13.2) #Motivation for taking out extreme value as outlier: Labjournal error, Cook's distance > 0.5, hatvalues > 2.5 times hatvalue mean
+
+#Extreme values 2/2
+outlierTest(Model_ShanSub13.2) # Bonferroni p < 0.05 is motivation to call extreme point an outlier
+```
+* All good 
+
+> No problems with the model
+
+___________________
+
+
+###### Subset 14
+
+This data set has the same errors as all other subset that only incl Stoep. Maybe it does not have enough point per level (thus location). For now, dont use this set. Might revisit later.
+
+**Model_SpRichSub14**
+
+```{r, eval=F}
+#Homogeneity var visual and test - NOT LOADED
+residualPlots(Model_SpRichSub14, layout = c(3,1), id = TRUE)
+ncvTest(Model_SpRichSub14) # p < 0.05 means heteroscedacity
+```
+
+___________________
+
+**Model_ShanSub14**
+
+```{r}
+#Homogeneity var visual and test - NOT LOADED
+residualPlots(Model_ShanSub14, layout = c(3,1), id = TRUE)
+ncvTest(Model_ShanSub14) # p < 0.05 means heteroscedacity
+```
+
+___________________
+
+###### Final Models
+
+```{r, eval=FALSE}
+Model_SpRichSub13.2 <- lm(log(Sp_richness) ~ Dataset + Location + Area , data = ShannonSubset13) 
+Model_SpRichSub13.4 <- lm(log(Sp_richness) ~ Area , data = ShannonSubset13) #needs GLM
+Model_ShanSub13 <-  lm(Rel_div ~ Dataset + Location + Area, data = ShannonSubset13)
+Model_ShanSub13.2 <-  lm(Rel_div ~Area, data = ShannonSubset13)
+```
+
+### Model statistics
+
+The models Model_SpRichSub13.2 and Model_ShanSub13 will be used for the model statistics. These model include data from ShannonSubset3 and ShannonSubset9. See 'Data prints' > 'Different Subsets'. In the chapters below, each model is treat separately. 
+
+_________________________
+
+###### All city data - *Model_SpRichSub13.2*
+
+    ShannonSubset3 includes all city data from both data sets, both the comparable cities and the cities that only have enough data in the Stoep data. A t-test should be used to analyse the difference between the data sets. Note: the difference between both sets could also be tested in with the comparable city data only (subset 9). The only difference than would be that stoep data has as much data as PJ. However, for the t-test, this extra data for Stoep (in subset3) only adds value. Therefore, it was not chosen to also test the difference in data set of the data in subset 9.
+
+_________________________
+
+**Hypotheses**
+
+    It is expected that the data of the Pavement Plant Project (here called Stoep) is sufficient to calculate the relative diversity. The data of the Eindejaars Plantenjacht by Floron (here called PJ) includes almost 10 time as much data. Despite the difference in method, e.g. limitations in time/period/etc, the data of Eindejaars Plantenjacht is used as a guideline for the reliability of the calculated relative diversity. 
+
+    H0: There is no significant difference between the relative diveristy of the Pavement Plant Project (Stoep) and Eindejaars Plantenjacht (PJ). 
+
+_________________________
+
+**Test**
+
+    To compare the response (species richness) between the two levels (Stoep & PJ) of the explanatory factor (Dataset), a t-test was used. 
+    
+An ANCOVA was used 
+
+```{r}
+summary(Model_SpRichSub13.2)
+```
+
+> p << 0.05
+
+> > **There is ...** 
+
+XXXXXXXX do post hoc?
+
+_________________________
+
+**Visualisation**
+
+*FigureDiv_F*
+
+```{r}
+FigureDiv_F <- ggplot(ShannonSubset13, aes(Area, Sp_richness, color=Dataset)) + 
+  geom_point() + 
+  labs(x="City Area", y="Species richness", title = "Species richness in relation to city area", caption = "A GLM is needed for statistics on the relation of sp rich and area") +
+  scale_colour_discrete(name="Dataset",labels = c("Eindejaars Plantenjacht", "Stoepplantjes Project")) + 
+  theme(legend.position="bottom", legend.title = element_text(size=10, face="bold"), plot.title = element_text(size=12, face="bold"))
+                                      
+FigureDiv_F 
+
+ggsave("R_figures/FigureDiv_F.pdf", width= 6, height=6) #to save the plot in working directory!
+```
+
+_____________________
+
+###### All city data - *Model_ShanSub13*
+
+    ShannonSubset3 includes all city data from both data sets, both the comparable cities and the cities that only have enough data in the Stoep data. A t-test should be used to analyse the difference between the data sets. Note: the difference between both sets could also be tested in with the comparable city data only (subset 9). The only difference than would be that stoep data has as much data as PJ. However, for the t-test, this extra data for Stoep (in subset3) only adds value. Therefore, it was not chosen to also test the difference in data set of the data in subset 9.
+
+_________________________
+
+**Hypotheses**
+
+    It is expected that the data of the Pavement Plant Project (here called Stoep) is sufficient to calculate the relative diversity. The data of the Eindejaars Plantenjacht by Floron (here called PJ) includes almost 10 time as much data. Despite the difference in method, e.g. limitations in time/period/etc, the data of Eindejaars Plantenjacht is used as a guideline for the reliability of the calculated relative diversity. 
+
+    H0: There is no significant difference between the relative diveristy of the Pavement Plant Project (Stoep) and Eindejaars Plantenjacht (PJ). 
+
+_________________________
+
+**Test**
+
+    To compare the response (species richness) between the two levels (Stoep & PJ) of the explanatory factor (Dataset), a t-test was used. 
+```{r}
+t.test(Sp_richness ~ Dataset , data = ShannonSubset3)
+```
+
+> p ...
+
+> > **There is ...** 
+
+______________________
+
+**Visualisation**
+
+*FigureDiv_G*
+
+```{r}
+FigureDiv_G <- ggplot(ShannonSubset3, aes(Dataset, Sp_richness, color=factor(Dataset), group=Dataset)) + geom_boxplot() + labs(x="Dataset", y="Species richness", title = "Species richness per dataset", caption = "p-value = 0.0109") + 
+  scale_colour_discrete(name="Dataset",labels = c("Eindejaars Plantenjacht", "Stoepplantjes Project")) + theme(legend.position="bottom", legend.title = element_text(size=10, face="bold"), plot.title = element_text(size=12, face="bold")) + geom_signif(comparisons = list(c("EindejaarsPlantenjacht", "Stoepplantjes")), map_signif_level=TRUE)
+                                      
+FigureDiv_G + geom_point()
+
+ggsave("R_figures/FigureDiv_G.pdf", width= 6, height=6) #to save the plot in working directory!
+```
+
+___________________
+
+## Data prints
+
+### Shannon data set
+
+```{r}
+print(Shannon)
+```
+
+### Different Subsets
+
+**Subset** | **Dataset** | **Scale** |**Additional**
+--------------- | ------------|----------|-------------
+ShannonSubset1 | Stoep | All | -
+ShannonSubset2 | PJ | All | - 
+ShannonSubset3 | All | City | - 
+ShannonSubset4 | All | City | Only if comparable = yes - error in data
+ShannonSubset5| Stoep | City |-   
+ShannonSubset6 | PJ | City | - 
+ShannonSubset7 | All | Zip | - 
+ShannonSubset8 | Stoep | Zip | -  
+ShannonSubset9 | All | City | Only if comparable = yes - correct data (new version of ShannonSubset4)
+ShannonSubset10 | Stoep | Zip | Same data as ShannonSubset8, but fool proof layout
+ShannonSubset11 | Stoep | Zip | Without #10
+ShannonSubset12 | Stoep | City | Same data as ShannonSubset5, but fool proof layout
+ShannonSubset13 | All | City | Incl city area
+ShannonSubset14 | All | City | Only if comparable = yes + incl city area
+
+```{r}
+print(ShannonSubset1)
+print(ShannonSubset2) 
+print(ShannonSubset3) 
+print(ShannonSubset4) 
+print(ShannonSubset5) 
+print(ShannonSubset6) 
+print(ShannonSubset7) 
+print(ShannonSubset8) 
+print(ShannonSubset9) 
+print(ShannonSubset10) 
+print(ShannonSubset11) 
+```
+
+
+
+
+## GLM 
+
+**Dealing with; residuals not normally distributed**
+
+###### Background
+
+**Generalized Linear Model**, for Poisson.
+
+*Poisson distribution* 
+
+- For counts and waiting times.
+- Same family as Norm(); exponential family. (like: binomial, negative binomial and Gamma)
+- Only 1 parameter: Pois( λ ) (Instead of Norm( μ , σ )) --> if λ is low, the distribution does not even look like a normal distribution, because λ = μ and λ = σ^2.
+- Likely to get Under/overdispersion; λ = μ and λ = σ^2 -- so, poissonis not able to show excess variation (due to 1 param instead of 2). 
+- Numeric variable are Integer variables (counts; also a numeric variable)
+
+*GLM Model*
+
+Transforms the model, not response (unlike transformation). 
+
+Build on 3 elements:
+
+1.	The linear equation
+2.	A distribution of the exponential family. - AKA Error structure
+3.	A link function that links the linear equation to a distribution.
+
+        1. Linear equatation
+        η = β_0 + β_1 x_1 + β_2 x_2 + β_3 x_3 + ⋯
+        expectation = linear model + NO residuals
+    
+        2. Distribution of exponential family
+        General equation:
+            f(yi; Θi, φ) = exp((yi Θi - b (Θi)) / a ϕ + c (yi ; ϕ))
+            Θ = to be estimated
+            ϕ = dispersion parameter (scale) 
+            a, b & c dependent of distribution.
+            
+        - Normal dist: Θ = μ, ϕ = σ^2 and b (Θ) = σ^2 /2
+        - Poisson dist: Θ = log(μ), ϕ = 1 and b(Θ) = exp(Θ)
+        - Binomial dist: Θ = log(μ /(n - μ), ϕ = 1 and b(Θ) = nlog( 1 + e^Θ)
+
+        3. Linkfunction
+        Poisson:
+        Identity: for big expectation values (poisson); 
+        log: for strong assymetry with long tail; 
+        √: for light assymerty and medium expectation values;
+        
+        Binominal:
+        logit; and probit.
+        
+        See below for more. 
+    
+NOTE: Maximum Likelihood is used instead of Least Squares. ML fits the model by maximizing the probability of selecting the sample given a parameter and minimizes Deviance Residuals.
+    
+***
+
+###### Workflow
+
+1. Data Analysis > as shown in intro
+2. Model diagnostics > mostly as shown in intro
+
+- Create model
+- Homogeneity of variance 
+- **Poisson (e.g.) distribution residuals** (instead of normal, as 'usual')
+- Check for outliers
+- Create new model: GLM
+  - Start over with Model diagnostics
+
+NOTE: The residual distribution MUST be one of the exponential family to perform a GLM.
+
+```{r, eval=FALSE}
+ModelGLM_Link <- glm(Response ~ Explanatory, family = ErrorStructure(Linkfunction), data = Data)
+```
+
+- Visualization example
+
+```{r, eval=FALSE}
+# for Count ~ Concentration + Treatment, data = Poisson
+library(ggplot2)
+ggplot(Poisson, aes(Concentration, Count, colour = Treatment)) + 
+  geom_smooth(method="glm",  method.args = list(family = poisson(link = "log"))) +
+  geom_point() + ggtitle("Log linkfunction")
+```
+
+*There probably seems to be no linear regression and no continuous slope. Due to the fluctuation of slopes GLM uses rate of change. See below.*
+
+3. Model statistics
+
+```{r, eval = FALSE}
+summary(ModelGLM_Link)
+```
+
+*OUTPUT*
+
+      Deviance Residuals:                                                         *a.
+           Min        1Q    Median        3Q       Max  
+      -2.70384  -0.67059  -0.07818   0.60572   1.84736  
+
+      Coefficients:
+                                   Estimate   Std. Error  z value   Pr(>|z|)      *b&c.
+      (Intercept)                  0.57919    0.25828     2.242     0.024929 *  
+      TreatmentASFT                0.34223    0.31953     1.071     0.284149    
+      TreatmentFGST                0.56290    0.30348     1.855     0.063625 .  
+      Concentration                0.10243    0.05592     1.832     0.067001 .    *d.
+      TreatmentASFT:Concentration  0.16126    0.06655     2.423     0.015385 *  
+      TreatmentFGST:Concentration  0.21453    0.06328     3.390     0.000698 ***
+
+    (Dispersion parameter for poisson family taken to be 1)                       *e.
+
+    Null deviance: 423.514  on 71  degrees of freedom
+    Residual deviance:  66.505  on 66  degrees of freedom                         *f. 
+    AIC: 324.88
+
+    Number of Fisher Scoring iterations: 5                                        *g.
+
+a. Deviance Residuals = Variance Residuals
+  - Some sort of Sum of Squares. Minimized due to the use of Maximum Likelihood.
+  - Median should be around 0 and Min and Max should deviate approximately the same distance from median. 
+b. Estimate = slope, Estimate of interaction = slope difference 
+  - *Note: GLM uses rate of change instead of slope, therefore the rate of change needs to be calculated. See below. *
+c. LM uses t-value, GLM uses z-value. Same calulation.
+d. Concentration is N.S., but the interactions with Concentration are. Leave Conc in model.
+e. Dispersion parameter Poisson is 1 means λ = 1. 
+  - Expecting to have a perfect fit when Res.dev.:Df = 1:1
+  - Want to alter this value? "summary(ModelGLM, dispersion = desired value)"
+f. To be interpreted as dispersion parameter φ.
+  - Deviance explained: (Null deviance - residual deviance)/Null deviance
+  - Perfect fit of model when Residuals deviance = Df (see e.)
+  - Residuals deviance < Df = underdispersion = too complex > Type 2 error
+  - Residuals deviance > Df = overdispersion = not complex enough > type 1 error
+g. Fisher Scoring: algorithm needed x steps to find the best fit.
+  - A Fisher score iteration of 4-8 is good
+  - A Fisher score iteration of 15-.., to much iterations to be reliable.
+
+**NOTE:** if you think you detected overdispersion, check by:
+
+```{r}
+#Residual deviance: 238.88  on 70  degrees of freedom
+pchisq(238.88,70, lower.tail = FALSE)
+```
+
+P-value < 0.05, there is a significant overdispersion.
+
+
+***
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

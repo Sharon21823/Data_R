@@ -1,0 +1,97 @@
+---
+title: "R_Notes_StudAss24"
+author: "Sharon"
+date: '`r Sys.Date()`'
+output: html_document
+---
+
+# Basics
+
+## Setting workspace
+```{r}
+setwd("/Users/sharonvandenburg/Documents/Werk & Loopbaan/Projecten/Stoepplantjes 2024/Data_R")
+```
+
+## Packages
+
+```{r}
+library(readxl)
+library(dplyr)
+library(tidyverse)
+```
+
+# Floron Data
+
+## km-Grid cell 
+
+```{r}
+ km_Observation_data <- readRDS("~/Documents/Werk & Loopbaan/Projecten/Stoepplantjes 2024/Data_R/Laurens/Observation_data.rds")
+ 
+ km_Visit_data <- readRDS("~/Documents/Werk & Loopbaan/Projecten/Stoepplantjes 2024/Data_R/Laurens/Visit_data.rds")
+ 
+#also read "~/Documents/Werk & Loopbaan/Projecten/Stoepplantjes 2024/Data_R/Laurens/README_file.rds", zie wat hieronder staat
+```
+
+km_Observation_data:
+- Site: 	site ID of visit, 1 x 1 km grid cells
+- Visit:	visit ID
+- Year:		year of visit, period: 2012 - 2019
+- Date:		date of visit, period: 2012 - 2019
+- **Species:	species ID, as used by FLORON in their database**
+
+km_Visit_data:
+- Site: 	site ID of visit, 1 x 1 km grid cells
+- Visit:	visit ID
+- Year:		year of visit, period: 2012 - 2019
+- Date:		date of visit, period: 2012 - 2019
+- Observer:	observer ID, the observer that uploaded observations to the database
+- N_observers:	number of observers for a single list of observations
+- Duration:	number of hours spent observing
+- **N_species:	raw number of unique species recorded during the visit**
+
+De data van een grid cell (bv. 49) staat dus per voorkomende plantsoort (bv nr 200) in de Obs file. Dit is samengevoegd tot species richness per visit (bv. 1920) in de Visit file. 
+
+Alle losse observaties staan dus in de Obs file & alle samenvattingen per visit is de Visit file.
+
+> Er wordt dus enkel naar Y/N voorkomen gekeken per soort + species richness
+
+
+# Stoep Data
+
+## Cleaning the excel file
+
+https://www.geeksforgeeks.org/data-cleaning-in-r/
+
+Laadt data in hoe je normaal doet --> hernoem naar 'datastoep'
+
+```{r}
+datastoep <- read_excel("~/Documents/Werk & Loopbaan/Projecten/Stoepplantjes 2024/Data_R/Export_stoep_R.xlsx", 
+    sheet = "originele data") 
+
+datastoep.test <- read_excel("~/Documents/Werk & Loopbaan/Projecten/Stoepplantjes 2024/Data_R/adres_stoep20240704-203311.xlsx", 
+    sheet = "adres_stoep20240704-203311") 
+
+library(tidyverse)
+
+datastoep.simple <- datastoep[,c(9,20)]
+
+data.stoep.table <- data.frame(table(datastoep.simple))
+library(dplyr)
+
+data.stoep.table2 <- data.stoep.table  %>%
+  pivot_wider(
+    names_from = wetnaam,
+    values_from = Freq
+  )
+
+```
+
+
+
+
+
+
+
+
+
+

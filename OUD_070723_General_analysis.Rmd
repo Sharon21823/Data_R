@@ -1,0 +1,1626 @@
+---
+title: "General_analysis"
+author: "Sharon"
+date: 'April 11th 2023'
+output: 
+  html_document:
+    toc: true
+    number_sections: true
+classoption: 
+- bookmarksnumbered
+---
+
+# Start
+_____________________
+
+Plots that will be used are marked with "> use"
+
+## Packages
+_____________________
+
+Load at the beginning of every session.
+
+```{r}
+library(readxl)
+library(ggplot2)
+library(carData)
+library(car)
+library(RColorBrewer)
+library(htmltools)
+library(ggpubr)
+library(gridExtra) #for combining plots
+library(cowplot) #for combining plots
+```
+
+## Data
+_____________________
+
+Downloaded Stoepplantjes data from the Floron platform on March 9 2023 - edited the location incorrectly, so this will be addressed and the data will be replaced later. Deleted e-mailadresses and names --> see Data management in Analysis documents.
+
+**Latest edit:**
+
+- 3/13/23 fixed location separation
+- 3/14/23 added variable year
+- 3/17/23 took out all unvalidated variables
+- 4/4/23 incl editedR_3, all location data
+
+```{r}
+# Latest data
+Data0411 <- read_excel("~/Documents/Universiteit/4. Internships/Hortus 2023/Data/Data versioning/04_11_Location selection.xlsx", 
+    sheet = "Complete_val_data")
+```
+
+_____________________
+
+**Older versions** 
+
+In the plots below, older versions may be used. Therefore, these data need to be loaded as well.
+
+```{r}
+#version 3/13
+Data0313 <- read_excel("~/Documents/Universiteit/4. Internships/Hortus 2023/Data/Data versioning/03_13_General analysis.xlsx", 
+    sheet = "Complete_data")
+
+#version 3/14
+Data0314 <- read_excel("~/Documents/Universiteit/4. Internships/Hortus 2023/Data/Data versioning/03_13_General analysis.xlsx", 
+    sheet = "Complete_data")
+
+#version 3/20
+Data0320 <- read_excel("~/Documents/Universiteit/4. Internships/Hortus 2023/Data/Data versioning/03_20_General analysis.xlsx", 
+    sheet = "Complete_val_data")
+
+#version 3/21
+Data0321 <- read_excel("~/Documents/Universiteit/4. Internships/Hortus 2023/Data/Data versioning/03_21_General analysis.xlsx", 
+    sheet = "Complete_val_data")
+
+#version 4/4
+Data0404 <- read_excel("~/Documents/Universiteit/4. Internships/Hortus 2023/Data/Data versioning/04_04_General analysis.xlsx", 
+    sheet = "Complete_val_data")
+```
+
+_____________________
+
+**EditedR**
+
+An additional dataset 'EditedR' (in the excelsheet 'date_General analysis.xlsx') was derived from the original validated dataset (Complete_val_data). This set contains information on different location scales (e.g. observations per province, per location or zip codes). During the process of graph design, more data might be added to these tabs. 
+
+```{r}
+# City level with province information
+DataEditedR <- read_excel("~/Documents/Universiteit/4. Internships/Hortus 2023/Data/Data versioning/03_24_General analysis.xlsx", 
+    sheet = "EditedR")
+
+# Zip code level with province and city information
+DataEditedR_2 <- read_excel("~/Documents/Universiteit/4. Internships/Hortus 2023/Data/Data versioning/03_28_General analysis.xlsx", 
+    sheet = "EditedR_2")
+
+# Street level with province and city information
+DataEditedR_3 <- read_excel("~/Documents/Universiteit/4. Internships/Hortus 2023/Data/Data versioning/04_04_General analysis.xlsx", 
+    sheet = "EditedR_3")
+```
+
+**ProvinceInfo**
+
+Added to or 4/11, but created in one of the earliest versions of the data editing. 
+
+```{r}
+ProvinceInfo <- read_excel("~/Documents/Universiteit/4. Internships/Hortus 2023/Data/Data versioning/04_11_General analysis.xlsx", 
+    sheet = "Province info")
+```
+
+_______________________
+
+# Data Stucture
+_____________________
+
+## First graphs 
+_____________________
+
+The graphs below are used as inspiration for further analysis. These graphs will not be used in the results.
+
+**Data collection through time in a simple plot**
+
+```{r, eval=T, echo=T}
+plot(Data0313$date, Data0313$Obs)
+```
+
+> Do not use. Better visualisation possible
+
+Interesting, but a ggplot might give additional value
+
+**GGplot data collection through time**
+
+```{r, eval=F, echo=T}
+gg_date_Obs <- ggplot(Data0313, aes(date, Obs, label=land))
+
+gg_date_Obs + geom_point(aes(colour=land))+
+  labs(x="Dates", y="Number of observation", title = "Data collection through time") +
+  geom_text(data=subset(Data0313, land = "BE"))          
+```
+
+> Do not use. Points are the form of letters
+
+**Collection through time - cumulative**
+
+```{r , eval=F, echo=T}
+gg_date_Obs <- ggplot(Data0313, aes(date, Obs, label=land))
+
+gg_date_Obs + geom_point(aes(colour=land))+
+  labs(x="Dates", y="Number of observation", title = "Data collection through time") 
+```
+
+> Do not use
+
+**Percent stack - total 100%**
+ 
+```{r, eval=T, echo=T}
+# Percent
+ggplot(Data0320, aes(fill=year, y=count, x=provincename)) +             #a
+    geom_bar(position="fill", stat="identity") +                        #b 
+  labs(x="Province", y="% of collected data",                        #c
+       title = "Data collection per province distributed over time") +  #d
+  scale_fill_manual(values=c('darkgreen', 'gold1', 'green4')) +         #e
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))   #g
+
+```
+
+> Do not use - might be useful, but lined graph might be more valuable
+
+**Line stack - lm per province**
+
+```{r, eval=FALSE, echo=T}
+ggplot(Data0314,aes(x=date,y=cumsum(count)))+
+         geom_point()+
+         theme_classic()+geom_smooth(method=lm,se=FALSE,
+                  aes(color=province))
+```
+
+> Do not use 
+
+**Pie chart: Obs vs province**
+
+```{r, eval=FALSE, echo=T}
+PieObsProvince <- read_excel("~/Documents/Universiteit/4. Internships/Hortus 2023/Data/Data versioning/03_14_General analysis.xlsx", 
+    sheet = "Obs verdeling")
+pie(PieObsProvince$ObsProvince,PieObsProvince$Province)
+```
+
+> Do not use. Pie charts are easier with Excel.
+
+## Useful graphs
+_____________________
+
+**Stacked bar chart - collection through time per province**
+
+*Figure_A*
+
+```{r}
+#### XXXXX
+library(forcats)
+
+# Figure_A_new - Stacked - collection through time NEW
+Figure_A_new <-ggplot(Data0320, aes(x = reorder(provincename,~count), y=count, fill=year)) #a
+
+Figure_A_new + geom_bar( position="stack", stat="identity") +                       #b 
+  labs(x="Province", y="Number of observations",                        #c
+       title = "Data collection per province over time") +              #d
+  scale_fill_manual(values=c('darkgreen', 'gold1', 'green4')) +         #e
+  scale_y_continuous(breaks = c(0,500, 1000,1500,2000,2500, 3000))+     #f
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))   #g
+
+
+
+ggsave("R_figures/Figure_A_new.pdf", width= 9, height=7)            #h
+```
+
+> Use
+
+a. data
+b. bar type
+c. lab names
+d. title
+e. Manual fill color
+f. Manual breaks on scale
+g. Rotation and spacing of x-asis
+h. Save the graph to R_Figures in working directory 
+
+    + scale_color_brewer(palette = "RdYlGn") #To add palette - did not work
+
+```{r}
+ggbarplot(Data0320, x = "provincename", y = "count",
+          fill = "year",               # change fill color by cyl
+          color = "white",            # Set bar border colors to white
+          sort.val = "desc",          # Sort the value in dscending order
+          sort.by.groups = FALSE,     # Don't sort inside each group
+          x.text.angle = 90) +  
+         labs(x="Province", y="Number of observations", title = "Data per city", subtitle = "Cities with >55 observations - top 21 ")
+```
+    
+_______________
+
+**Province and observations - Point - Obs per province + #cities per province**  
+
+*Figure_B* 
+
+```{r}
+# Figure_B - Dot
+ggplot(DataEditedR, aes(y=obsprovince, x=provincename)) +                   #a
+    geom_point(aes(size = Cities_per_province), color = "green4")+      #b
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+  #c
+  labs(x="Province", y="Number of observations",                        #d
+       title = "Data collection and cities per province")+              #e
+    scale_y_continuous(breaks = c(0,500, 1000,1500,2000,2500, 3000))+   #f
+  labs(color="green4", size="Cities per \nprovince")
+
+ggsave("R_figures/Figure_B.pdf", width= 9, height=7)
+```
+
+> Use 
+
+a. data
+b. type
+c. Rotation and spacing of x-axis
+d. lab names
+e. title
+f. Manual breaks on scale
+
+```{r}
+Model_0620 <- lm(obsprovince~Cities_per_province, data=DataEditedR)
+```
+```{r}
+#Homogeneity variance check 1/2 
+residualPlots(Model_0620, layout = c(2,1), id = TRUE)
+```
+Warning, which is logical because Location is a factor with a lot of levels
+```{r}
+#Homogeneity variance check 2/2 
+ncvTest(Model_0620) # p < 0.05 means heteroscedacity (not desired)
+```
+```{r}
+#Transformation
+boxCox(Model_0620)
+```
+* Response^{-1} seems the best option
+
+```{r}
+#1st transformation model
+Model_0620_2 <- lm((obsprovince^{1/3}) ~ Cities_per_province, data=DataEditedR) #City, all
+```
+
+```{r}
+#Homogeneity variance check 1/2 
+residualPlots(Model_0620_2, layout = c(2,1), id = TRUE)
+
+#Homogeneity variance check 2/2 
+ncvTest(Model_0620_2) # p < 0.05 means heteroscedacity (not desired)
+
+#Normal distribution residuals 1/2
+shapiro.test(Model_0620_2$resid) # H0: residuals are normally distributed
+
+#Normal distribution residuals 2/2
+library(car)
+qqPlot(Model_0620_2$residuals, id = TRUE) #see if residuals are within confindence region (id=TRUE -> name point)
+```
+```{r}
+#Extreme values 1/2
+influenceIndexPlot(Model_0620_2) #Motivation for taking out extreme value as outlier: Labjournal error, Cook's distance > 0.5, hatvalues > 2.5 times hatvalue mean
+```
+
+> Model not usable
+ 
+_________________________
+
+# Location Scales
+_____________________
+
+In this section, multiple location scales are investigated. Different graphs show the data distribution within these location scales from different aspects and with different degrees of depth.
+
+## City Scale 
+_____________________
+
+### Subset creation
+_____________________
+
+Different subsets were created with different criteria. The stats below are used as inspiration for the created subsets.
+
+**Stats Excel** See 04_04_General analysis.xlsx, Factsheet
+
+**Stat** | **Value**
+----- | -----
+Gemiddelde	| 88,15
+Mediaan 	| 16,5
+Q0 (minimumwaarde)	| 1
+Q1 (25%)	| 6
+Q2 (50%)	| 16,5
+Q3 (75%)	| 85
+Q4 (Maximumwaarde)	| 1015
+
+____________________
+
+**Data Subset** | **Criteria**
+--------------- | ------------------
+DataSubset1 | includes all cities with at least 3 observations. This number of observations is a minimum, according to statistic rule of thumb.
+DataSubset2 | includes all cities with at least 8 observations. This number excludes a chuck of data, but is not motivated otherwise.
+DataSubset3 | includes all cities with at least 10 observations. This number of observations is the median of all validated data BE only contains Antwerpen now
+DataSubset4 | includes all cities with at least 10 observations in NL. AKA - took out Antwerpen.
+DataSubset5 | includes all cities with at least 10 and at most 300 observations in NL. AKA - took out Amsterdam, to focus on the distribution of the other cities.
+DataSubset6 | includes all cities with at least 22 observations in NL. This number of observations is the average of all validated data. 
+DataSubset7 | includes all cities with at least 22 and at most 300 observations in NL. AKA - took out Amsterdam, to focus on the distribution of the other cities.
+
+- Use DataSubset4 to show the distribution of all cities above median and use DataSubset5 to show a close up of this distribution (by excluding Adam). From hereon further selection is possible. 
+
+*Subset codes*
+
+```{r}
+# Complete set
+DataSubset1 <- DataEditedR[which(DataEditedR$obscity > 2),] # 3 is statically motivated
+DataSubset2 <- DataEditedR[which(DataEditedR$obscity > 8),]
+DataSubset3 <- DataEditedR[which(DataEditedR$obscity > 10),] # median
+
+# Without BE
+DataSubset4 <- DataEditedR[which(DataEditedR$country=='NL' & DataEditedR$obscity > 10),] #zonder BE (alleen antwerpen heeft genoeg data), alleen NL 
+DataSubset5 <- DataEditedR[which(DataEditedR$country=='NL' & DataEditedR$obscity > 10 & DataEditedR$obscity < 300),] #zonder BE (alleen antwerpen heeft genoeg data), alleen NL en zonder Amsterdam (om te zien dat hoe de andere data verdeeld is - gezien de hoge waarde. Niet exclude, maar alleen voor de visualisatie)
+DataSubset6 <- DataEditedR[which(DataEditedR$country=='NL' & DataEditedR$obscity > 22 ),]  #
+DataSubset7 <- DataEditedR[which(DataEditedR$country=='NL' & DataEditedR$obscity > 22 & DataEditedR$obscity < 300),] #Excl BE, excl Amsterdam
+```
+
+_______________________
+
+### Observations per city 
+_____________________
+
+**Observations per city - visualized per province** - incl & excl Amsterdam
+
+*Figure_C & Figure_D*
+
+```{r}
+#Figure_C - Obs/city/province - incl Adam
+ggplot(DataSubset4, aes(y=obscity, x=cityprovince))+                           # a
+  geom_point(color="green4") +                                                 # b
+  facet_wrap(~province, scales="free_x", nrow=2)+                              # c
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=4))+ # d
+  labs(x="City", y="Number of observations",                                   # e
+       title = "Data collection per city per province",                        #
+       subtitle = "Cities in the Netherlands with at least 10 observations",
+       )+        #
+  geom_hline(yintercept = 100, color="green4", linetype= "dashed")+            # f
+    scale_y_continuous(breaks = c(0,100,250,500,1000))                         # g
+
+ggsave("R_figures/Figure_C.pdf", width= 9, height=7)
+
+#Figure_D Obs/city/province - excl Adam
+ggplot(DataSubset5, aes(y=obscity, x=cityprovince))+                           # a
+  geom_point(color="green4") +                                                 # b
+  facet_wrap(~province, scales="free_x", nrow=2)+                              # c
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=4))+ # d
+  labs(x="City", y="Number of observations",                                   # e
+       title = "Data collection per city per province",                        #
+       subtitle = "Cities in the Netherlands with at least 10 observations",
+       caption = "Amsterdam excluded \nDashed lines at 30 and 90 (top 10)")+         #
+  geom_hline(yintercept = c(30,90), color="green4", linetype="dashed")+             # f
+    scale_y_continuous(breaks = c(0,30,90,100,250,500,1000))                         # g
+
+ggsave("R_figures/Figure_D.pdf", width= 9, height=11)
+```
+
+> Use both
+
+a. data
+b. graph type, colored manually 
+c. multiple graphs in 1 grapgh. nrow=1 all graphs on 1 line, scales="free_x" only shows cities with data 
+d. Rotation and spacing of x-asis
+e. title axis, title, caption
+f. Dashed green line on y=150
+g. Manual breaks on scale
+
+```{r, eval=F, echo=F}
+**Full code, not optimal**
+    #ggplot point - obs per city TEST
+    ggplot(DataSubset1, aes(y=obscity, x=cityprovince))+ 
+      geom_point() + facet_wrap(~province, scales="free_x", strip.position = "bottom")+ #nrow=1 voor alles op 1  rij, scales="free_x" toont alleen de aanwezige steden, strip.position="bottom" voor plek province labels
+      theme(strip.placement="outside", axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=4))+          #strip.placement --> prov namen onder de cities
+      labs(x="City", y="Number of observations",                        
+       title = "Data collection per city")+ 
+      geom_hline(yintercept = 100, color="green4", linetype= "dashed")+    
+        scale_y_continuous(breaks = c(0,250,500,750,1000))  
+#Obs per cities, punten per province zichtbaar, maar namen momenteel allemaal bij elke provincie.... see https://www.youtube.com/watch?v=KoAJZYEOwSE 
+```
+
+_______________________
+
+### Top 10 
+_____________________
+
+Top 10 cities with most observations - visualized per province
+
+**Data Subset** | **Criteria**
+--------------- | ------------------
+DataSubset8 | includes the top 10 locations with the most observation (no selection in scale). These data are all >90 observations.
+
+**Data collection per city per province** - Top 10
+
+*Figure_E*
+
+```{r}
+#Subset 
+DataSubset8 <- DataEditedR[which(DataEditedR$obscity > 90),] # top 10
+
+#Figure_E - Obs/city/province - Top 10
+ggplot(DataSubset8, aes(y=obscity, x=cityprovince))+                            # a
+  geom_point(color="green4") +                                                  # b
+  facet_wrap(~province, scales="free_x", nrow=1)+                               # c
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=10))+ # d
+  labs(x="City", y="Number of observations",                                    # e
+       title = "Data collection per city per province",                         # 
+       subtitle ="Top 10 (>90 observations)",                                   # 
+       caption = "Line seperates top 3")+                             #  
+  geom_hline(yintercept = 200, color="green4", linetype= "dashed")+             # f
+    scale_y_continuous(breaks = c(0,100,200, 250,500,1000))                     # g
+
+ggsave("R_figures/Figure_E.pdf", width= 9, height=7)
+```
+
+> Use
+
+a. data
+b. graph type, colored manually 
+c. multiple graphs in 1 grapgh. nrow=1 all graphs on 1 line, scales="free_x" only shows cities with data 
+d. Rotation and spacing of x-asis
+e. title axis, title, subtitle, caption
+f. Dashed green line on y=150
+g. Manual breaks on scale
+
+_________________
+
+
+
+
+
+
+
+## Zip code Scale
+_______________________
+
+### Subset creation
+_____________________
+
+Different subsets were created with different criteria. The stats below are used as inspiration for the created subsets.
+
+**Stats Excel** See 04_04_General analysis.xlsx, Factsheet
+
+**Stat** | **Obs/zip code**	| **Obs/city (zip code incl)**
+--------- | ------------- | -------------
+Gemiddelde	| 7,28	| 20,671
+Mediaan	| 2	| 7
+Q0 (minimumwaarde)	| 1	| 1
+Q1 (25%)	| 1	| 2
+Q2 (50%)	| 2	| 7
+Q3 (75%)	| 7	| 26
+Q4 (Maximumwaarde)	| 87	| 141
+
+____________________
+
+**Data Subset** | **Criteria**
+--------------- | ------------------
+DataSubset9 | includes all zip codes with at least 3 observations. This number of observations is a minimum, according to statistic rule of thumb. The median is 2, which is to low statistically. 
+DataSubset10 | includes all cities with at least 10 observations. This number of observations is the median of all validated data. BE is excluded
+DataSubset11 | includes all cities with at least 7 observations. This number of observations is the average of all validated data.
+DataSubset12 | includes all cities with at least 10 observations. This number excludes a chuck of data, but is not motivated otherwise.
+DataSubset13 | includes the top 10 locations with the most observation (selection in zip code scale). These data are all >30 observations.
+DataSubset14 | includes all provinces with at least 10 observations. This number excludes a chuck of data, but is not motivated otherwise.
+
+- Use DataSubset11, 14 and 15
+
+*Subset codes*
+
+```{r}
+# Complete dataset 
+DataSubset9 <- DataEditedR_2[which(DataEditedR_2$obszip > 2),] # 3 is statically motivated
+
+# Excl BE
+DataSubset10 <- DataEditedR_2[which(DataEditedR_2$country=='NL' & DataEditedR_2$obszip > 2),] # 3 is statically motivated and Belgium excl.
+DataSubset11 <- DataEditedR_2[which(DataEditedR_2$country=='NL' & DataEditedR_2$obszip > 7),] #gemiddelde, nl
+DataSubset12 <- DataEditedR_2[which(DataEditedR_2$country=='NL' & DataEditedR_2$obszip > 10),] #no reasoning
+
+# Top 10
+DataSubset13 <- DataEditedR_2[which(DataEditedR_2$country=='NL' & DataEditedR_2$obszip > 30),] #top 10
+
+# Provinces zip and city(zip)obs min Q3
+DataSubset14 <- DataEditedR_2[DataEditedR_2$province%in%c('Limburg', 'Noord-Holland','Gelderland', 'Noord-Brabant','Overijsel', 'Zuid-Holland', 'Groningen'), ]
+```
+
+_______________________
+
+### Observations per zip code 
+_____________________
+
+**Observations per zip code** - visualized per province + zip code names
+
+*Figure F* 
+
+```{r}
+#Figure_F - Obs/zip/city/province --> labels obszip > 10
+ggplot(DataSubset9, aes(y=obszip, x=cityprovince, label=zipcode))+             # a
+  geom_point(color="green4") +                                                 # b
+  facet_wrap(~province, scales="free_x", nrow=2)+                              # c
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=4))+ # d
+  labs(x="City", y="Number of observations",                                   # e
+       title = "Data collection per zip code, city, and province",             #
+       subtitle = "Zip codes with at least 3 observations",                    #
+       caption = "Zip codes with > 10 observations are labeled")+              #
+  geom_hline(yintercept = 7, color="green4", linetype= "dashed")+              # f
+    scale_y_continuous(breaks = c(0,10, 20, 40, 60, 80, 100)) +                # g
+  geom_text(data=subset(DataSubset9,                                           # h
+                        obszip > 10),                              
+                        nudge_x = 0.1 , nudge_y = 8, check_overlap = T, angle = 45, size = 3) 
+
+ggsave("R_figures/Figure_F.pdf", width= 9, height=7)
+```
+
+> Use - see where to draw the line 
+
+Dashed line:
+- 7 is Q3 of obs zip data
+
+_______________________
+
+**Observations per zip code** - visualized per zip code and province
+
+```{r}
+#Obs per zip code per city --> province not mentioned
+ggplot(DataSubset9, aes(y=obszip, x=zipcode))+                            # a
+  geom_point(color="green4") +                                                 # b
+  facet_wrap(~cityprovince, scales="free_x", nrow=2)+                              # c
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=4))+ # d
+  labs(x="City", y="Number of observations",                               # e
+       title = "Data collection per zip code, city, and province",              #
+       caption = "All displayed zip codes have at least 3 observations")+      #
+  geom_hline(yintercept = 10, color="green4", linetype= "dashed")+            # f
+    scale_y_continuous(breaks = c(0,10, 25, 50, 75, 100))                         # g
+
+ggsave("R_figures/Data_zip_city.pdf", width= 9, height=7)
+```
+
+> Do not use - not optimal visuals
+
+_______________________
+
+**Observations per zip code** - visualized per city and province - BE excl
+
+*Figure_G*
+
+```{r}
+#Figure_G - Obs per zip code per city per province 
+ggplot(DataSubset10, aes(y=obszip, x=cityprovince, label=zipcode))+            # a
+  geom_point(color="green4") +                                                 # b
+  facet_wrap(~province, scales="free_x", nrow=2)+                              # c
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=8))+ # d
+  labs(x="City", y="Number of observations",                                   # e
+       title = "Data collection per zip code, city, and province in NL",        #
+       subtitle = "Zip codes with at least 3 observations",                    #
+       caption = "Each data point represents a zip codes")+                     #
+  geom_hline(yintercept = 20, color="green4", linetype= "dashed")+             # f
+    scale_y_continuous(breaks = c(0, 20, 40, 60, 80, 100))+                    # g
+  geom_text(data=subset(DataSubset10,                                          # h
+                        obszip > 20),                              
+                        nudge_x = 0.1 , nudge_y = 8, check_overlap = T, angle = 45, size = 3)  
+
+ggsave("R_figures/Figure_G.pdf", width= 9, height=7)
+```
+
+> Use - see if it is possible to add more info 
+
+a. data + mention the label for geom_text 
+b. graph type, colored manually 
+c. multiple graphs in 1 graph. nrow=1 all graphs on 1 line, scales="free_x" only shows cities with data 
+d. Rotation and spacing of x-asis
+e. title axis, title, caption
+f. Dashed green line on y=150
+g. Manual breaks on scale
+h. labeling
+
+h. alternative:  geom_label(data=subset(DataSubset10,                          
+                        obszip > 20),                              
+                        nudge_x = 1.0 , nudge_y = 0.50, label.size = 0.025) 
+                        
+_______________________
+
+**Data collection per zipcode, city, and province in NL** - Zip codes with at least 7 observations
+
+```{r}
+#Obs per zip code per city per province --> gemiddelde als baseline
+ggplot(DataSubset11, aes(y=obszip, x=cityprovince))+                           # a
+  geom_point(color="green4") +                                                 # b
+  facet_wrap(~province, scales="free_x", nrow=2)+                              # c
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=4))+ # d
+  labs(x="City", y="Number of observations",                                   # e
+       title = "Data collection per zip code, city, and province in NL",        #
+       subtitle = "Zip codes with at least 7 observations",                    #
+       caption = "Each zip codes has its own data point")+                     #
+  geom_hline(yintercept = 10, color="green4", linetype= "dashed")+             # f
+    scale_y_continuous(breaks = c(0,10, 25, 50, 75, 100))                          # g
+
+ggsave("R_figures/Data_zip_provinceNLGem.pdf", width= 9, height=7)
+```
+
+> Do not use
+
+**Data collection per zipcode, city, and province in NL** - Zip codes with at least 10 observations
+
+```{r}
+#Obs per zip code per city per province --> boven 10
+ggplot(DataSubset12, aes(y=obszip, x=cityprovince))+                           # a
+  geom_point(color="green4") +                                                 # b
+  facet_wrap(~province, scales="free_x", nrow=2)+                              # c
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=4))+ # d
+  labs(x="City", y="Number of observations",                                   # e
+       title = "Data collection per zipcode, city, and province in NL",        #
+       subtitle = "Zip codes with at least 10 observations",                    #
+       caption = "Each zip codes has its own data point")+                     #
+  geom_hline(yintercept = 30, color="green4", linetype= "dashed")+             # f
+    scale_y_continuous(breaks = c(0,25,30, 50, 75, 100))                          # g
+
+ggsave("R_figures/Data_zip_provinceNL10.pdf", width= 9, height=7)
+```
+
+> Do not use
+
+_______________________
+
+### Top 10 zip codes 
+_____________________
+
+**Zip code - top 10**
+
+*Figure_H*
+
+```{r}
+#Figure_H Obs per zip code per city per province --> gemiddelde als baseline
+ggplot(DataSubset13, aes(y=obszip, x=cityprovince, label=zipcode))+                           # a
+  geom_point(color="green4") +                                                 # b
+  facet_wrap(~province, scales="free_x", nrow=2)+                              # c
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=8))+ # d
+  labs(x="City", y="Number of observations",                                   # e
+       title = "Data collection per zip code, city, and province in NL",        #
+       subtitle = "Top 10 - zip codes with at least 30 observations",          #
+       caption = "Each zip codes has its own data point")+                     #
+  geom_hline(yintercept = 50, color="green4", linetype= "dashed")+             # f
+    scale_y_continuous(breaks = c(30, 40, 50, 60, 70, 80, 90, 100))+           # g
+  geom_text(data=subset(DataSubset13,                                          # h
+                        obszip > 20),                              
+                        nudge_x = 0.1 , nudge_y = 4, check_overlap = T, angle = 45, size = 3)
+
+ggsave("R_figures/Figure_H.pdf", width= 9, height=7)
+```
+
+> use 
+
+_______________________
+
+
+### Observations per zip code and city
+_____________________
+
+**Comment**
+
+>"IS DIT DE JUISTE MANIER? OF WIL IK ALLE ZIPCODES COMBINEREN PER STAD?" --> Yes
+
+Alle zip code namen als de city ook hoog is.
+
+**Obs per zip code per city per province, ALL PROVINCES**
+
+*Figure_I*
+
+```{r}
+#Figure_I Obs per zip code per city per province 
+# ALL PROVINCE
+# --> zip code labels if both zip en city(zip)obs > Q3
+ggplot(DataSubset9, aes(y=obszip, x=cityprovince, label=zipcode))+             # a
+  geom_point(color="green4") +                                                 # b
+  facet_wrap(~province, scales="free_x", nrow=2)+                              # c
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=4))+ # d
+  labs(x="City", y="Number of observations",                                   # e
+       title = "Data collection per zipcode, city, and province",              #
+       subtitle = "Zip codes with at least 3 observations",                    #
+       caption = "Highest 25% of obs zip & obs city labeled")+                        #
+  geom_hline(yintercept = 7, color="green4", linetype= "dashed")+              # f
+    scale_y_continuous(breaks = c(0,7, 20, 40, 60, 80, 100)) +                 # g
+  geom_text(data=subset(DataSubset9,                                           # h
+                        obscity_zippresent > 26 & obszip > 7 ),                              
+                        nudge_x = 0.1 , nudge_y = 4, check_overlap = T, angle = 45, size = 3) 
+
+ggsave("R_figures/Figure_I.pdf", width= 9, height=7)
+```
+
+> Might use --> BE incl
+
+_______________________
+
+**Obs per zip code per city per province, EXCL BE**
+
+*Figure_J*
+
+```{r}
+#Figure_J Obs per zip code per city per province
+# EXCL BE
+# --> zip code labels if both zip en city(zip)obs > Q3
+ggplot(DataSubset10, aes(y=obszip, x=cityprovince, label=zipcode))+             # a
+  geom_point(color="green4") +                                                 # b
+  facet_wrap(~province, scales="free_x", nrow=2)+                              # c
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=4))+ # d
+  labs(x="City", y="Number of observations",                                   # e
+       title = "Data collection per zipcode, city, and province in NL",              #
+       subtitle = "Zip codes with at least 3 observations",                    #
+       caption = "Highest 25% of obs zip & obs city labeled")+                     #
+  geom_hline(yintercept = 7, color="green4", linetype= "dashed")+             # f
+    scale_y_continuous(breaks = c(0,7, 20, 40, 60, 80, 100)) +                # g
+  geom_text(data=subset(DataSubset10,                                           # h
+                        obscity_zippresent > 26 & obszip > 7 ),                              
+                        nudge_x = 0.1 , nudge_y = 4, check_overlap = T, angle = 45, size = 3) 
+
+ggsave("R_figures/Figure_J.pdf", width= 9, height=7)
+```
+
+> Might use --> BE excl
+
+_______________________
+
+**Obs per zip code per city per province, INCL PROVINCE WITH LABELS**
+
+*Figure_K*
+
+```{r}
+#Figure_K Obs per zip code per city per province
+# INCL PROVINCE WITH LABELS
+# --> zip code labels if both zip en city(zip)obs > Q3
+ggplot(DataSubset14, aes(y=obszip, x=cityprovince, label=zipcode))+             # a
+  geom_point(color="green4") +                                                 # b
+  facet_wrap(~province, scales="free_x", nrow=2)+                              # c
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=4))+ # d
+  labs(x="City", y="Number of observations",                                   # e
+       title = "Data collection per zipcode, city, and province",              #
+       subtitle = "Only provinces with labeled data included",                    #
+       caption = "Highest 25% of obs zip & obs city labeled")+                     #
+  geom_hline(yintercept = 7, color="green4", linetype= "dashed")+             # f
+    scale_y_continuous(breaks = c(0,7, 20, 40, 60, 80, 100)) +                # g
+  geom_text(data=subset(DataSubset14,                                           # h
+                        obscity_zippresent > 26 & obszip > 7 ),                              
+                        nudge_x = 0.1 , nudge_y = 4, check_overlap = T, angle = 45, size = 3) 
+
+ggsave("R_figures/Figure_K.pdf", width= 9, height=7)
+```
+
+> use 
+
+Dashed line: 
+- zip > 20 is top 15 for zip
+- zip > 7 is Q3
+- 26 is Q3 for city obs
+
+a. data + mention the label for geom_text 
+b. graph type, colored manually 
+c. multiple graphs in 1 graph. nrow=1 all graphs on 1 line, scales="free_x" only shows cities with data 
+d. Rotation and spacing of x-asis
+e. title axis, title, caption
+f. Dashed green line on y=150
+g. Manual breaks on scale
+h. labeling
+_______________________
+
+### Top 10 zip code and city 
+_____________________
+
+City and zip code data combined 
+
+```{r}
+DataSubset15 <- DataEditedR_2[which(DataEditedR_2$country=='NL' 
+& DataEditedR_2$obszip > 30 & DataEditedR_2$obscity_zippresent > 39),] #top 10 zip en city(SUMzip)
+
+```
+
+_______________________ 
+
+**No dashed line and all labeled**
+
+*Figure_L*
+
+```{r}
+#Figure_L Obs per zip code per city per province --> top 10 baseline not supported
+ggplot(DataSubset15, aes(y=obszip, x=cityprovince, label=zipcode))+                           # a
+  geom_point(color="green4") +                                                 # b
+  facet_wrap(~province, scales="free_x", nrow=1)+                              # c
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=10))+ # d
+  labs(x="City", y="Number of observations",                                   # e
+       title = "Data collection per zip code, city, and province in NL",       #
+       subtitle = "Top 10 - zip codes with at least 30 observations \nand at least 40 observation per city",          #
+       caption = "Each zip codes has its own data point")+                     #
+    scale_y_continuous(breaks = c(30, 40, 50, 60, 70, 80, 90, 100))+           # g
+  geom_text(data=subset(DataSubset15,                                          # h
+                        obszip > 20),                              
+                        nudge_x = 0.1 , nudge_y = 4, check_overlap = T, angle = 45, size = 3)
+
+ggsave("R_figures/Figure_L.pdf", width= 9, height=7)
+```
+
+> Use 
+
+a. data + mention the label for geom_text 
+b. graph type, colored manually 
+c. multiple graphs in 1 graph. nrow=1 all graphs on 1 line, scales="free_x" only shows cities with data 
+d. Rotation and spacing of x-asis
+e. title axis, title, caption
+f. Dashed green line on y=150
+g. Manual breaks on scale
+h. labeling
+
+_______________________
+
+**Labeled**
+
+*Figure_M*
+
+```{r}
+#Figure_M Obs per zip code per city per province
+ggplot(DataSubset15, aes(y=obszip, x=cityprovince, label=zipcode))+                   # a
+  geom_point(aes(size = obscity_zippresent), color="green4") +                        # b
+  facet_wrap(~province, scales="free_x", nrow=1)+                                     # c
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=10))+       # d
+  labs(x="City", y="Number of observations",                                          # e
+       title = "Data collection per zip code, city, and province in NL",              #
+       subtitle = "Top 10 - Zip codes with at least 50 observations \nand at least 90 observation per city", #
+       caption = "Top 3 most zip code observations are labeled")+                     #
+    scale_y_continuous(breaks = c(30, 40, 50, 60, 70, 80, 90, 100))+                  # g
+  geom_text(data=subset(DataSubset15,                                                 # h
+                         obscity_zippresent > 90 & obszip > 50),                              
+                        nudge_x = 0.1 , nudge_y = 4, check_overlap = T, angle = 45, size = 3)+
+  labs(color="green4", size="Observations \nper city")                                # i
+
+ggsave("R_figures/Figure_M.pdf", width= 9, height=7)
+```
+
+> Use
+
+*NOG NA TE LOPEN*
+
+a. data + mention the label for geom_text 
+b. graph type, colored manually 
+c. multiple graphs in 1 graph. nrow=1 all graphs on 1 line, scales="free_x" only shows cities with data 
+d. Rotation and spacing of x-asis
+e. title axis, title, caption
+f. Dashed green line on y=150
+g. Manual breaks on scale
+h. labeling
+
+_______________________
+
+### Observations per zip code, city, and total obs
+_____________________
+
+A subset is made with all zip codes that have more 3 observations (DataSubset11). The graph below shows, like earlier, the number of observations. Mind that zip codes with less than 3 observations are excluded and do not count in the calculations of the total observations. 
+
+**Data collection per zip code, city, and province in NL** - Top 10 - Zip codes with at least 50 observations \nand at least 90 observation per city
+
+*Figure_N*
+
+```{r}
+#Figure_M Obs per zip code per city per province
+ggplot(DataSubset11, aes(y=obscity_zippresent, x=cityprovince, label=zipcode))+             # a
+  geom_point(aes(size = obszip), color="green4") +                  # b
+  facet_wrap(~province, scales="free_x", nrow=1)+                               # c
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=10))+ # d
+  labs(x="City", y="Number of observations",                                    # e
+       title = "Data collection per zip code, city, and province in NL",        #
+       subtitle = "Top 10 - Zip codes with at least 50 observations \nand at least 90 observation per city", #
+       caption = "Top 3 is labeled")+                     #
+  geom_hline(yintercept = 50, color="green4", linetype= "dashed")+              # f
+    scale_y_continuous(breaks = c(30, 40, 50, 60, 70, 80, 90, 100))+            # g
+  geom_text(data=subset(DataSubset11,                                           # h
+                         obscity_zippresent > 90),                              
+                        nudge_x = 0.1 , nudge_y = 4, check_overlap = T, angle = 45, size = 3)+
+  labs(color="green4", size="Observations \nper city")
+
+ggsave("R_figures/Figure_N.pdf", width= 9, height=7)
+```
+
+> Use? 
+
+*NOG NALOPEN*
+
+a. data + mention the label for geom_text 
+b. graph type, colored manually 
+c. multiple graphs in 1 graph. nrow=1 all graphs on 1 line, scales="free_x" only shows cities with data 
+d. Rotation and spacing of x-asis
+e. title axis, title, caption
+f. Dashed green line on y=150
+g. Manual breaks on scale
+h. labeling
+
+__________________________
+
+
+
+
+## Street scale
+________________________
+
+### Subset creation
+_____________________
+
+Different subsets were created with different criteria. The stats below are used as inspiration for the created subsets.
+
+**Stats Excel** See 04_04_General analysis.xlsx, Factsheet
+
+**Stat** | **Value**
+----- | -----
+Gemiddelde	| 7,90
+Mediaan	| 8
+Q0 (minimum)	| 1
+Q1 (25%)	| 2
+Q2 (50%)	| 8
+Q3 (75%)	| 11
+Q4 (maximum)	| 64
+
+____________________
+
+**Data Subset** | **Criteria**
+--------------- | ------------------
+DataSubset16 | includes all locations with at least 3 observations. This number of observations is a minimum, according to statistic rule of thumb. The median is 2, which is to low statistically.
+DataSubset17 | includes all locations with at least 8 observations. This number of observations is the median of all validated data.
+DataSubset18 | includes all locations with at least 11 observations. This number of observations is the 3rd Quartile of all validated data.
+DataSubset19 | includes all locations with at least 19 observations. This number is not otherwise motivated (besides including the top 30 locations) but excludes a chuck of data. 
+DataSubset20 | includes all the top 10 locations. Thus locations with > 30 observations
+
+- ...use ...
+
+*Subset codes* 
+
+```{r}
+# subsets 
+DataSubset16 <- DataEditedR_3[which(DataEditedR_3$obslocation > 2),] 
+DataSubset17 <- DataEditedR_3[which(DataEditedR_3$obslocation > 8),]
+DataSubset18 <- DataEditedR_3[which(DataEditedR_3$obslocation > 11),] 
+DataSubset19 <- DataEditedR_3[which(DataEditedR_3$obslocation > 19),] 
+DataSubset20 <- DataEditedR_3[which(DataEditedR_3$obslocation > 30),] 
+```
+
+________________________
+
+### Observations per location 
+_____________________
+
+The 3 graphs below contain the same data. However the labeling differs per graph. One of the 3 graph will be used. 
+
+**Observations per location** - *province or city* label ,min 3 observations
+
+*Figure O & Figure P*
+
+```{r}
+#Figure_O 
+ggplot(DataSubset16, aes(y=obslocation, x=cityprovince, label=province))+            # a
+  geom_point(color="green4") +                                                 # b
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=4))+ # d
+  labs(x="City", y="Number of observations",                                   # e
+       title = "Data collection per location and city",             #
+       subtitle = "Locations with at least 3 observations",                    #
+       caption = "Each data point respresents a location \nTop 10 observations are labeled with corresponding province \nDashed line indicates the 75% mark of all data")+              #
+  geom_hline(yintercept = 11, color="green4", linetype= "dashed")+              # f
+    scale_y_continuous(breaks = c(5, 10,11, 20, 40, 60, 80, 100)) +                # g
+  geom_text(data=subset(DataSubset16,                                           # h
+                        obslocation > 30),                              
+                        nudge_x = 0.1 , nudge_y = 2, check_overlap = T, size = 3)
+  
+ggsave("R_figures/Figure_O.pdf", width= 9, height=7)
+
+#Figure_P
+ggplot(DataSubset16, aes(y=obslocation, x=cityprovince, label=cityprovince))+            # a
+  geom_point(color="green4") +                                                 # b
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=4))+ # d
+  labs(x="City", y="Number of observations",                                   # e
+       title = "Data collection per location and province",             #
+       subtitle = "Locations with at least 3 observations",                    #
+       caption = "Each data point respresents a location \nTop 10 observations are labeled with corresponding province \nDashed line indicates the 75% mark of all data")+              #
+  geom_hline(yintercept = 11, color="green4", linetype= "dashed")+              # f
+    scale_y_continuous(breaks = c(5, 10,11, 20, 40, 60, 80, 100)) +                # g
+  geom_text(data=subset(DataSubset16,                                           # h
+                        obslocation > 30),                              
+                        nudge_x = 0.1 , nudge_y = 2, check_overlap = T, size = 3)
+  
+ggsave("R_figures/Figure_P.pdf", width= 9, height=7)
+```
+
+> Use one of the 2 - *Only use one of the three (Figure O, P, or Q)*
+If it is decided that is it not valuable to display (almost) all data. Figures R or S (or T or U) might be used instead
+
+_____________________________
+
+**Observations per location** - *location* label ,min 3 observations
+
+*Figure Q*
+
+```{r}
+#Figure_Q
+ggplot(DataSubset16, aes(y=obslocation, x=cityprovince, label=location))+      # a
+  geom_point(color="green4") +                                                 # b
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=4))+ # d
+  labs(x="City", y="Number of observations",                                   # e
+       title = "Data collection per location and city",             #
+       subtitle = "Locations with at least 3 observations",                    #
+       caption = "Each data point respresents a location \nTop 10 observations are labeled with corresponding location \nDashed line indicates the 75% mark of all data")+              #
+  geom_hline(yintercept = 11, color="green4", linetype= "dashed")+              # f
+    scale_y_continuous(breaks = c(5, 10,11, 20, 40, 60, 80, 100)) +                # g
+  geom_text(data=subset(DataSubset16,                                           # h
+                        obslocation > 30),                              
+                        nudge_x = 0.1 , nudge_y = 2, check_overlap = T, size = 3)
+
+ggsave("R_figures/Figure_Q.pdf", width= 9, height=9)
+```
+
+> Do not use - *Only use one of the three (Figure O, P, or Q)*
+
+________________________
+
+**Observations per location**
+
+```{r}
+#Obs per location
+ggplot(DataSubset16, aes(y=obslocation, x=location))+                         # a
+  geom_point(color="green4") +                                                # b
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=4))+# d
+  labs(x="Location", y="Number of observations",                              # e
+       title = "Data collection location",                                    #
+       caption = "All displayed ... have at least 3 observations")+           #
+  geom_hline(yintercept = 11, color="green4", linetype= "dashed")+            # f
+    scale_y_continuous(breaks = c(0,11, 25, 50, 75, 100))                     # g
+```
+
+> Do not use - to much on x asis
+
+________________________
+
+**Observations per location** - *province or city * label, min 8 observations
+
+*Figure_R & Figure_S* 
+
+```{r}
+#Figure_R
+ggplot(DataSubset17, aes(y=obslocation, x=cityprovince, label=province))+            # a
+  geom_point(color="green4") +                                                 # b
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=4))+ # d
+  labs(x="City", y="Number of observations",                                   # e
+       title = "Data collection per location and city",             #
+       subtitle = "Locations with at least 8 observations - top 50%",                    #
+       caption = "Each data point respresents a location \nTop 10 observations are labeled with corresponding province \nDashed line indicates the 75% mark of all data")+              #
+  geom_hline(yintercept = 11, color="green4", linetype= "dashed")+              # f
+    scale_y_continuous(breaks = c(0,10,11, 20, 40, 60, 80, 100)) +                # g
+  geom_text(data=subset(DataSubset17,                                           # h
+                        obslocation > 30),                              
+                        nudge_x = 0.1 , nudge_y = 2, check_overlap = T, size = 3)
+  
+ggsave("R_figures/Figure_R.pdf", width= 9, height=7)
+
+#Figure_S
+ggplot(DataSubset17, aes(y=obslocation, x=cityprovince, label=cityprovince))+  # a
+  geom_point(color="green4") +                                                 # b
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=4))+ # d
+  labs(x="City", y="Number of observations",                                   # e
+       title = "Data collection per location and city",             #
+       subtitle = "Locations with at least 8 observations - top 50%",                    #
+       caption = "Each data point respresents a location \nTop 10 observations are labeled with corresponding city \nDashed line indicates the 75% mark of all data")+              #
+  geom_hline(yintercept = 11, color="green4", linetype= "dashed")+              # f
+    scale_y_continuous(breaks = c(0,10,11, 20, 40, 60, 80, 100)) +                # g
+  geom_text(data=subset(DataSubset17,                                           # h
+                        obslocation > 30),                              
+                        nudge_x = 0.1 , nudge_y = 2, check_overlap = T, size = 3)
+  
+ggsave("R_figures/Figure_S.pdf", width= 9, height=7)
+```
+
+> Use one of the 2 
+
+________________________
+
+**Observations per location** - *province or city * label, min 11 observations
+
+*Figure_T & Figure_U* 
+
+```{r}
+#Figure_T
+ggplot(DataSubset18, aes(y=obslocation, x=cityprovince, label=province))+            # a
+  geom_point(color="green4") +                                                 # b
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=4))+ # d
+  labs(x="City", y="Number of observations",                                   # e
+       title = "Data collection per location and city",             #
+       subtitle = "Locations with at least 11 observations - top 25%",                    #
+       caption = "Each data point respresents a location \nTop 10 observations are labeled with corresponding province")+              #
+  geom_hline(yintercept = 30, color="green4", linetype= "dashed")+              # f
+    scale_y_continuous(breaks = c(0,10, 20,30, 40, 60, 80, 100)) +                # g
+  geom_text(data=subset(DataSubset18,                                           # h
+                        obslocation > 30),                              
+                        nudge_x = 0.1 , nudge_y = 2, check_overlap = T, size = 3)
+  
+ggsave("R_figures/Figure_T.pdf", width= 9, height=7)
+
+#Figure_U
+ggplot(DataSubset18, aes(y=obslocation, x=cityprovince, label=cityprovince))+  # a
+  geom_point(color="green4") +                                                 # b
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=4))+ # d
+  labs(x="City", y="Number of observations",                                   # e
+       title = "Data collection per location and city",             #
+       subtitle = "Locations with at least 11 observations - top 25%",                    #
+       caption = "Each data point respresents a location \nTop 10 observations are labeled with corresponding city")+              #
+  geom_hline(yintercept = 30, color="green4", linetype= "dashed")+              # f
+    scale_y_continuous(breaks = c(0,10, 20,30, 40, 60, 80, 100)) +                # g
+  geom_text(data=subset(DataSubset18,                                           # h
+                        obslocation > 30),                              
+                        nudge_x = 0.1 , nudge_y = 2, check_overlap = T, size = 3)
+  
+ggsave("R_figures/Figure_U.pdf", width= 9, height=7)
+```
+
+> Use one of the 2 
+
+________________________
+
+**Observations per location, city and province**
+
+*Figure_V*
+
+```{r}
+#Figure_V 
+ggplot(DataSubset18, aes(y=obslocation, x=location, label=cityprovince))+       # a
+  geom_point(color="green4") +                                                  # b
+  facet_wrap(~province, scales="free_x", nrow=2)+                               # c
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=4))+  # d
+  labs(x="Location", y="Number of observations",                                # e
+       title = "Data collection per location, city, and province",        #
+       subtitle = "Locations with at least 11 observations - top 25%",          #
+       caption = "The top 10 locations are labels with the corresponding city")+   #
+  geom_hline(yintercept = 30, color="green4", linetype= "dashed")+              # f
+    scale_y_continuous(breaks = c(0, 20, 30, 40, 60, 80, 100))+                 # g
+  geom_text(data=subset(DataSubset18,                                           # h
+                        obslocation > 30),                              
+                        nudge_x = 0.1 , nudge_y = 8, check_overlap = T, angle = 45, size = 2)  
+
+ggsave("R_figures/Figure_V.pdf", width= 9, height=7)
+```
+
+> Do not use. Does not add additional value compared to graphs above.
+
+a. data + mention the label for geom_text 
+b. graph type, colored manually 
+c. multiple graphs in 1 graph. nrow=1 all graphs on 1 line, scales="free_x" only shows cities with data 
+d. Rotation and spacing of x-asis
+e. title axis, title, caption
+f. Dashed green line on y=150
+g. Manual breaks on scale
+h. labeling
+
+h. alternative:  geom_label(data=subset(DataSubset10,                          
+                        obszip > 20),                              
+                        nudge_x = 1.0 , nudge_y = 0.50, label.size = 0.025) 
+
+________________________
+
+**Observations per location and province**
+
+*Figure_W*
+
+```{r}
+#Figure_W 
+ggplot(DataSubset19, aes(y=obslocation, x=location, label=cityprovince))+       # a
+  geom_point(color="green4") +                                                  # b
+  facet_wrap(~province, scales="free_x", nrow=1)+                               # c
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=7))+  # d
+  labs(x="Location", y="Number of observations",                                # e
+       title = "Data collection per location, city, and province",        #
+       subtitle = "Locations with at least 20 observations - top 30 locations",          #
+       caption = "The top 10 locations are labels with the corresponding city")+ #
+  geom_hline(yintercept = 30, color="green4", linetype= "dashed")+              # f
+    scale_y_continuous(breaks = c(0, 20, 30, 40, 60, 80, 100))+                 # g
+  geom_text(data=subset(DataSubset19,                                           # h
+                        obslocation > 30),                              
+                        nudge_x = 0.1 , nudge_y = 3, check_overlap = T, angle = 45, size = 3)  
+
+ggsave("R_figures/Figure_W.pdf", width= 9, height=7)
+```
+
+> Use
+
+________________________
+
+### Top 10 locations
+_______________________
+
+
+**Observations per location and province**
+
+*Figure_X*
+
+```{r}
+#Figure_X
+ggplot(DataSubset20, aes(y=obslocation, x=location, label=cityprovince))+       # a
+  geom_point(color="green4")+                                                   # b
+  facet_wrap(~province, scales="free_x", nrow=1)+                               # c
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=7))+  # d
+  labs(x="Location", y="Number of observations",                                # e
+       title = "Data collection per location, city, and province",        #
+       subtitle = "Locations with at least 30 observations - top 10 locations",          #
+       caption = "The top 4 locations are labels with the corresponding city \nNote that both locations in Heerlen might indicate the same location")+ #
+  geom_hline(yintercept = 50, color="green4", linetype= "dashed")+              # f
+    scale_y_continuous(breaks = c(0, 20, 30, 40, 50, 60, 80, 100))+                 # g
+  geom_text(data=subset(DataSubset20,                                           # h
+                        obslocation > 40),                              
+                        nudge_x = -0.1 , nudge_y = 1, check_overlap = T, angle = 45, size = 3)  
+
+ggsave("R_figures/Figure_X.pdf", width= 9, height=7)
+```
+
+#
+
+## Location selection
+
+This section is meant for the display of the locations (on different scales). First some graph types and layouts will be tested to find the best graph type for this section.
+
+### Subsets top locations 
+
+For each scale, a subset is made containing the top 20 locations. If the value of data point 20 is equal to data point 21 (and 22), then these locations were included as well. Resulting in a top 21 or top 22. 
+
+Top 10 locations per scale were created earlier in this file. Province data was loaded in the 'data' section.
+
+```{r}
+# city
+DataSubset21 <- DataEditedR[which(DataEditedR$obscity > 55),] # top 20 (/21)
+
+# zip code
+DataSubset22 <- DataEditedR_2[which(DataEditedR_2$obszip > 15),] # top 20 (/21)
+
+# location
+DataSubset23 <- DataEditedR_3[which(DataEditedR_3$obslocation > 21),] # top 20 (/21/22)
+```
+
+
+### Graph type testing 
+
+**GG density** 
+
+https://rpkgs.datanovia.com/ggpubr/index.html#distribution
+
+```{r}
+ggdensity(Data0404, x = "province", 
+   add = "mean", rug = TRUE,
+   color = "provincename", fill = "provincename",
+   palette = c("#00AFBB", "#E7B800","#00AFBB", "#E7B800","#00AFBB", "#E7B800","#00AFBB", "#E7B800","#00AFBB", "#E7B800","#00AFBB", "#E7B800","#00AFBB"))
+```
+
+> do not use - not what i want
+
+________________________________________________
+
+**Ordered bar plot**
+
+https://rpkgs.datanovia.com/ggpubr/index.html#ordered-bar-plots 
+
+*Figure_Y*
+
+```{r, eval=F}
+#Figure_Y - CITY
+ggbarplot(DataSubset21, x = "cityprovince", y = "obscity",
+          fill = "province",               # change fill color by cyl
+          color = "white",            # Set bar border colors to white
+          sort.val = "desc",          # Sort the value in dscending order
+          sort.by.groups = FALSE,     # Don't sort inside each group
+          x.text.angle = 90) +  
+         labs(x="City", y="Number of observations", title = "Data per city", subtitle = "Cities with >55 observations - top 21 ")
+
+ggsave("R_figures/Figure_Y.pdf", width= 9, height=7)
+```
+
+> Use 
+
+_____________________________
+
+*Figure_Z*
+
+```{r, eval=F}
+#Figure_Z - ZIP
+ggbarplot(DataSubset22, x = "zipcode", y = "obszip",
+          fill = "cityprovince",               # change fill color by cyl
+          color = "white",            # Set bar border colors to white
+          sort.val = "desc",          # Sort the value in dscending order
+          sort.by.groups = FALSE,     # Don't sort inside each group
+          x.text.angle = 90) +  
+         labs(x="Zip code", y="Number of observations", title = "Data per zip code", subtitle = "Zip codes with >15 observations - top 21 ")
+
+ggsave("R_figures/Figure_Z.pdf", width= 9, height=7)
+```
+
+> Use 
+
+____________________________________
+
+*Figure_AA*
+
+```{r, eval=F}
+#Figure_AA - LOCATION
+ggbarplot(DataSubset23, x = "location", y = "obslocation",
+          fill = "cityprovince",               # change fill color by cyl
+          color = "white",            # Set bar border colors to white
+          sort.val = "desc",          # Sort the value in dscending order
+          sort.by.groups = FALSE,     # Don't sort inside each group
+          x.text.angle = 90) +  
+         labs(x="Location", y="Number of observations", title = "Data per location", subtitle = "Locations with >21 observations - top 22 ")
+
+ggsave("R_figures/Figure_AA.pdf", width= 9, height=7)
+```
+
+> Use 
+
+_________________________________________________
+
+**Dot chart**
+
+*Figure_AB* 
+
+```{r}
+#Figure_AB - Province
+ggdotchart(ProvinceInfo, x = "province", y = "obs",
+           color = "green4",                       # Color by groups. For pallete: palette = c("#00AFBB", "#E7B800", "#FC4E07"), # Custom color palette
+           sorting = "descending",                       # Sort value in descending order
+           add = "segments",                             # Add segments from y = 0 to dots
+           rotate = TRUE,                                # Rotate vertically
+           group = "obs",                           # Order by groups
+           dot.size = 12,                                 # Large dot size
+           label = round(ProvinceInfo$obs),                        # Add mpg values as dot labels
+           font.label = list(color = "gold1", size = 11, 
+                             vjust = 0.5),               # Adjust label parameters
+           ggtheme = theme_pubr()                        # ggplot2 theme
+           ) +  
+         labs(x="Province", y="Number of observations", title = "Data per province")
+
+ggsave("R_figures/Figure_AB.pdf", width= 9, height=7)
+
+ggdotchart10PROVINCE <-ggdotchart(ProvinceInfo, x = "province", y = "obs",
+           color = "province",palette = c("hotpink", "palevioletred1", "mediumpurple2","purple2","skyblue2","lightblue1", "mediumturquoise","lightseagreen", "mediumseagreen","darkkhaki", "yellow2", "orange2","orangered2"),# Color by groups. For pallete: palette = c("#00AFBB", "#E7B800", "#FC4E07"), # Custom color palette
+           sorting = "ascending",                       # Sort value in descending order
+           add = "segments",                             # Add segments from y = 0 to dots
+           rotate = TRUE,                                # Rotate vertically
+           group = "obs",                           # Order by groups
+           dot.size = 6,                                 # Large dot size
+           label = round(ProvinceInfo$obs),                        # Add mpg values as dot labels
+           font.label = list(color = "black", size = 9, 
+                             vjust = 0.5),               # Adjust label parameters
+           ggtheme = theme_pubr()                        # ggplot2 theme
+           ) +  
+         labs(x="Province", y="Number of observations", title = "Data per province")
+
+ggdotchart10PROVINCE
+
+```
+
+*Figure AC-AD*
+
+```{r}
+#Figure_AC - City top 20
+ggdotchart(DataSubset21, x = "cityprovince", y = "obscity",
+           color = "province",                       # Color by groups. For pallete: palette = c("#00AFBB", "#E7B800", "#FC4E07"), # Custom color palette
+           sorting = "descending",                       # Sort value in descending order
+           add = "segments",                             # Add segments from y = 0 to dots
+           rotate = TRUE,                                # Rotate vertically
+           group = "obscity",                           # Order by groups
+           dot.size = 6,                                 # Large dot size
+           label = round(DataSubset21$obscity),                        # Add mpg values as dot labels
+           font.label = list(color = "black", size = 9, 
+                             vjust = 0.5),               # Adjust label parameters
+           ggtheme = theme_pubr()                        # ggplot2 theme
+           ) +  
+         labs(x="City", y="Number of observations", title = "Data per city", subtitle = "Top 21 - >55 observations")
+
+ggsave("R_figures/Figure_AC.pdf", width= 9, height=7)
+
+#Figure_AD - City top 10
+ggdotchart10CITY <-ggdotchart(DataSubset8, x = "cityprovince", y = "obscity",
+           color = "province", 
+           # Color by groups. For pallete: palette = c("#00AFBB", "#E7B800", "#FC4E07"), # Custom color palette
+           sorting = "descending",                       # Sort value in descending order
+           add = "segments",                             # Add segments from y = 0 to dots
+           rotate = TRUE,                                # Rotate vertically
+           group = "obscity",                           # Order by groups
+           dot.size = 6,                                 # Large dot size
+           label = round(DataSubset8$obscity),                        # Add mpg values as dot labels
+           font.label = list(color = "black", size = 9, 
+                             vjust = 0.5),               # Adjust label parameters
+           ggtheme = theme_pubr()                        # ggplot2 theme
+           ) +  
+         labs(x="City", y="Number of observations", title = "Data per city", subtitle = "Top 10 - >90 observations")
+
+ggdotchart10CITY
+  
+ggsave("R_figures/Figure_AD.pdf", width= 9, height=7)
+```
+
+> Use one of both
+
+*Figure AE-AF*
+
+```{r}
+#Figure_AE - Zip top 20
+ggdotchart(DataSubset22, x = "cityprovince", y = "obszip",
+           color = "province",                       # Color by groups. For pallete: palette = c("#00AFBB", "#E7B800", "#FC4E07"), # Custom color palette
+           sorting = "descending",                       # Sort value in descending order
+           add = "segments",                             # Add segments from y = 0 to dots
+           rotate = TRUE,                                # Rotate vertically
+           group = "cityprovince",                           # Order by groups
+           dot.size = 6,                                 # Large dot size
+           label = round(DataSubset22$obszip),                        # Add mpg values as dot labels
+           font.label = list(color = "black", size = 9, 
+                             vjust = 0.5),               # Adjust label parameters
+           ggtheme = theme_pubr()                        # ggplot2 theme
+           ) +  
+         labs(x="City", y="Number of observations", title = "Data per zip code", subtitle = "Top 20", caption = "Dot per zip code \n Enschede has two zip codes with value 24")
+
+ggsave("R_figures/Figure_AE.pdf", width= 9, height=7)
+
+#Figure_AF - Zip top 10
+ggdotchart10ZIP <-ggdotchart(DataSubset13, x = "cityprovince", y = "obszip",
+           color = "province",                       # Color by groups. For pallete: palette = c("#00AFBB", "#E7B800", "#FC4E07"), # Custom color palette
+           sorting = "ascending",                       # Sort value in descending order
+           add = "segments",                             # Add segments from y = 0 to dots
+           rotate = TRUE,                                # Rotate vertically
+           group = "obszip",                           # Order by groups
+           dot.size = 6,                                 # Large dot size
+           label = round(DataSubset13$obszip),                        # Add mpg values as dot labels
+           font.label = list(color = "black", size = 9, 
+                             vjust = 0.5),               # Adjust label parameters
+           ggtheme = theme_pubr()                        # ggplot2 theme
+           ) +  
+         labs(x="City", y="Number of observations", title = "Data per zip code", subtitle = "Top 10", caption = "Dot per zip code")
+
+ggdotchart10ZIP 
+
+ggsave("R_figures/Figure_AF.pdf", width= 9, height=7)
+```
+
+> Use one of both
+
+_______________________________
+
+*Figure AG-AH*
+
+```{r}
+#Figure_AG - Location top 20
+ggdotchart(DataSubset23, x = "cityprovince", y = "obslocation",
+           color = "province",                       # Color by groups. For pallete: palette = c("#00AFBB", "#E7B800", "#FC4E07"), # Custom color palette
+           sorting = "descending",                       # Sort value in descending order
+           add = "segments",                             # Add segments from y = 0 to dots
+           rotate = TRUE,                                # Rotate vertically
+           group = "cityprovince",                           # Order by groups
+           dot.size = 6,                                 # Large dot size
+           label = round(DataSubset23$obslocation),                        # Add mpg values as dot labels
+           font.label = list(color = "black", size = 9, 
+                             vjust = 0.5),               # Adjust label parameters
+           ggtheme = theme_pubr()                        # ggplot2 theme
+           ) +  
+         labs(x="City", y="Number of observations", title = "Data per location", subtitle = "Top 20", caption = "Dot per location")
+
+ggsave("R_figures/Figure_AG.pdf", width= 9, height=7)
+
+#Figure_AH - Location top 10
+ggdotchart10LOCATION <-ggdotchart(DataSubset20, x = "cityprovince", y = "obslocation",
+           color = "province",                       # Color by groups. For pallete: palette = c("#00AFBB", "#E7B800", "#FC4E07"), # Custom color palette
+           sorting = "ascending",                       # Sort value in descending order
+           add = "segments",                             # Add segments from y = 0 to dots
+           rotate = TRUE,                                # Rotate vertically
+           group = "obslocation",                           # Order by groups
+           dot.size = 6,                                 # Large dot size
+           label = round(DataSubset20$obslocation),                        # Add mpg values as dot labels
+           font.label = list(color = "black", size = 9, 
+                             vjust = 0.5),               # Adjust label parameters
+           ggtheme = theme_pubr()                        # ggplot2 theme
+           ) +  
+         labs(x="City", y="Number of observations", title = "Data per location", subtitle = "Top 10", caption = "Dot per location")
+
+ggdotchart10LOCATION
+
+ggsave("R_figures/Figure_AH.pdf", width= 9, height=7)
+```
+
+> Use one of both
+
+_________________________
+
+### All scales - top locations
+
+All locations (on all three scales) is displayed in one graph, using the selected graph type from the previous section. 
+
+Used the following (slight changes to the top 10 data in the figures discussed above):
+
+```{r}
+ggdotchart10PROVINCE <- ggdotchart(ProvinceInfo, x = "province", y = "obs",
+           color = "green4",                       # Color by groups. For pallete: palette = c("#00AFBB", "#E7B800", "#FC4E07"), # Custom color palette
+           sorting = "ascending",                       # Sort value in descending order
+           add = "segments",                             # Add segments from y = 0 to dots
+           rotate = TRUE,                                # Rotate vertically
+           group = "obs",                           # Order by groups
+           dot.size = 7,                                 # Large dot size
+           label = round(ProvinceInfo$obs),                        # Add mpg values as dot labels
+           font.label = list(color = "gold1", size = 8, 
+                             vjust = 0.5),               # Adjust label parameters
+           ggtheme = theme_pubr()                        # ggplot2 theme
+           ) +  
+         labs(x="Province", y="Number of observations", title="Province scale")
+ggdotchart10CITY<-ggdotchart(DataSubset8, x = "cityprovince", y = "obscity",
+           color = "green4",                       # Color by groups. For pallete: palette = c("#00AFBB", "#E7B800", "#FC4E07"), # Custom color palette
+           sorting = "descending",                       # Sort value in descending order
+           add = "segments",                             # Add segments from y = 0 to dots
+           rotate = TRUE,                                # Rotate vertically
+           group = "obscity",                           # Order by groups
+           dot.size = 7,                                 # Large dot size
+           label = round(DataSubset8$obscity),                        # Add mpg values as dot labels
+           font.label = list(color = "gold1", size = 8, 
+                             vjust = 0.5),               # Adjust label parameters
+           ggtheme = theme_pubr()                        # ggplot2 theme
+           ) +  
+         labs(x="City", y="Number of observations", title="City scale")
+ggdotchart10ZIP<-ggdotchart(DataSubset13, x = "cityprovince", y = "obszip",
+           color = "green4",                       # Color by groups. For pallete: palette = c("#00AFBB", "#E7B800", "#FC4E07"), # Custom color palette
+           sorting = "descending",                       # Sort value in descending order
+           add = "segments",                             # Add segments from y = 0 to dots
+           rotate = TRUE,                                # Rotate vertically
+           group = "cityprovince",                           # Order by groups
+           dot.size = 7,                                 # Large dot size
+           label = round(DataSubset13$obszip),                        # Add mpg values as dot labels
+           font.label = list(color = "gold1", size = 8, 
+                             vjust = 0.5),               # Adjust label parameters
+           ggtheme = theme_pubr()                        # ggplot2 theme
+           ) +  
+         labs(x="City", y="Number of observations",caption = "Dot per zip code", title="Zip code scale")
+ggdotchart10LOCATION<-ggdotchart(DataSubset20, x = "cityprovince", y = "obslocation",
+           color = "green4",                       # Color by groups. For pallete: palette = c("#00AFBB", "#E7B800", "#FC4E07"), # Custom color palette
+           sorting = "ascending",                       # Sort value in descending order
+           add = "segments",                             # Add segments from y = 0 to dots
+           rotate = TRUE,                                # Rotate vertically
+           group = "obslocation",                           # Order by groups
+           dot.size = 7,                                 # Large dot size
+           label = round(DataSubset20$obslocation),                        # Add mpg values as dot labels
+           font.label = list(color = "gold1", size = 8, 
+                             vjust = 0.5),               # Adjust label parameters
+           ggtheme = theme_pubr()                        # ggplot2 theme
+           ) +  
+         labs(x="City", y="Number of observations",caption = "Dot per location", title="Street scale")
+
+```
+
+*Figure_AI*
+
+```{r}
+#Figure_AI - Combined top 10's
+title <- ggdraw() + draw_label("Observations per location scale", fontface='bold')
+plots<- plot_grid(ggdotchart10PROVINCE, ggdotchart10CITY, ggdotchart10ZIP, ggdotchart10LOCATION, labels= "AUTO")
+plot_grid(title, plots, ncol=1, rel_heights=c(0.1, 1))
+
+ggsave("R_figures/Figure_AI.pdf", width= 12, height=9)
+
+```
+
+```{r, eval=F}
+#or try
+grid.arrange(ggdotchart10PROVINCE, ggdotchart10CITY, ggdotchart10ZIP, ggdotchart10LOCATION)
+ggsave("R_figures/Figure_AI_b.pdf", width= 9, height=9)
+````
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
